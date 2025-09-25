@@ -1,7 +1,8 @@
 // This service handles all communication with the real NestJS backend for the admin panel.
 import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder } from './adminApiService';
 // Assuming the backend entities are similar enough to frontend types for this mapping
-import type { User, Product } from '@/types'; 
+import type { User, Product } from '@/types.ts'; 
+import { CATEGORIES } from '@/constants.ts';
 
 // --- REAL API IMPLEMENTATION ---
 
@@ -118,7 +119,6 @@ export const backendApiService = {
   getCategories: async (): Promise<CategorySchema[]> => {
     // There's no backend endpoint for categories, so we'll simulate it by returning the constants.
     // In a real app, this would be: `return apiFetch('/categories');`
-    const { CATEGORIES } = await import('@/constants');
     return CATEGORIES.map(mapCategoryToAdminCategory);
   },
    updateCategory: async (category: CategorySchema): Promise<CategorySchema> => {
