@@ -85,6 +85,12 @@ export interface AdminLog {
     message: string;
 }
 
+export interface AdminIcon {
+    id: string;
+    name: string;
+    svgContent: string;
+}
+
 
 // --- MOCK DATA ---
 
@@ -110,6 +116,11 @@ let mockOrders: AdminPanelOrder[] = [
 let mockCategories: CategorySchema[] = [
     { id: 'cat-1', name: 'Электроника', fields: [{ id: 'f1', name: 'brand', label: 'Бренд', type: 'text', required: true, options: [] }] },
     { id: 'cat-2', name: 'Товары ручной работы', fields: [{ id: 'f2', name: 'material', label: 'Материал', type: 'text', required: true, options: [] }] },
+];
+
+let mockIcons: AdminIcon[] = [
+    { id: 'icon-1', name: 'Электроника', svgContent: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-8 h-8"><path d="M3.25 4A2.25 2.25 0 001 6.25v7.5A2.25 2.25 0 003.25 16h13.5A2.25 2.25 0 0019 13.75v-7.5A2.25 2.25 0 0016.75 4H3.25zM10 8a.75.75 0 01.75.75v2.5a.75.75 0 01-1.5 0v-2.5A.75.75 0 0110 8zM5.75 9.5a.75.75 0 00-1.5 0v1a.75.75 0 001.5 0v-1zM14.25 9.5a.75.75 0 00-1.5 0v1a.75.75 0 001.5 0v-1z" /></svg>' },
+    { id: 'icon-2', name: 'Автомобили', svgContent: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-8 h-8"><path fill-rule="evenodd" d="M12.5 2.75a.75.75 0 00-1.5 0V4h-2V2.75a.75.75 0 00-1.5 0V4H6V2.75a.75.75 0 00-1.5 0V4H3.75A2.25 2.25 0 001.5 6.25v8.5A2.25 2.25 0 003.75 17h12.5A2.25 2.25 0 0018.5 14.75v-8.5A2.25 2.25 0 0016.25 4H15V2.75a.75.75 0 00-1.5 0V4h-1V2.75zM4.75 10a.75.75 0 000 1.5h.5a.75.75 0 000-1.5h-.5zM6.5 10.75a.75.75 0 01.75-.75h5a.75.75 0 010 1.5h-5a.75.75 0 01-.75-.75zM14.75 10a.75.75 0 000 1.5h.5a.75.75 0 000-1.5h-.5z" clip-rule="evenodd" /></svg>' },
 ];
 
 
@@ -183,6 +194,18 @@ export const adminApiService = {
         return category;
     },
     
+    getIcons: async (): Promise<AdminIcon[]> => {
+        await delay(300);
+        return [...mockIcons];
+    },
+
+    addIcon: async (icon: Omit<AdminIcon, 'id'>): Promise<AdminIcon> => {
+        await delay(500);
+        const newIcon = { ...icon, id: `icon-${Date.now()}` };
+        mockIcons.unshift(newIcon);
+        return newIcon;
+    },
+
     // Log streaming simulation
     subscribeToLogs: (callback: (log: AdminLog) => void): (() => void) => {
         const mockLogSources = ["API", "Database", "Auth", "Payments"];

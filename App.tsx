@@ -13,6 +13,7 @@ import FinancesPage from './pages/FinancesPage';
 import SettingsPage from './pages/SettingsPage';
 import DebugPage from './pages/DebugPage';
 import ProductModerationPage from './pages/ProductModerationPage';
+import IconsPage from './pages/IconsPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { isAuthenticated } = useAdminAuth();
@@ -35,6 +36,7 @@ const AppContent: React.FC = () => {
                              <Route path="/products" element={<ProductsPage />} />
                              <Route path="/products/moderation" element={<ProductModerationPage />} />
                              <Route path="/products/categories" element={<CategoriesPage />} />
+                             <Route path="/content/icons" element={<IconsPage />} />
                              <Route path="/orders" element={<OrdersPage />} />
                              <Route path="/finances/transactions" element={<FinancesPage />} />
                              <Route path="/finances/promocodes" element={<FinancesPage />} />
