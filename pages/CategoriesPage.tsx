@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { adminApiService, CategorySchema, CategoryField } from '../services/adminApiService';
+import { adminApiService, CategorySchema, CategoryField, AdminIcon } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
 
 // --- Components ---
 
@@ -67,6 +68,11 @@ interface CategoryModalProps {
 const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave }) => {
     const [editedCategory, setEditedCategory] = useState<CategorySchema>(category);
     const [isSaving, setIsSaving] = useState(false);
+    const [icons, setIcons] = useState<AdminIcon[]>([]);
+
+    useEffect(() => {
+        adminApiService.getIcons().then(setIcons);
+    }, []);
 
     const handleFieldUpdate = (fieldId: string, updates: Partial<CategoryField>) => {
         setEditedCategory(prev => ({
@@ -97,18 +103,35 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave
         setIsSaving(false);
         onClose();
     };
+    
+    const selectedIconSvg = icons.find(i => i.id === editedCategory.iconId)?.svgContent;
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
-            <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
                 <div className="p-4 border-b border-base-300">
                     <h2 className="text-xl font-bold">Редактор категории</h2>
-                     <input 
-                        type="text" 
-                        value={editedCategory.name} 
-                        onChange={e => setEditedCategory(prev => ({...prev, name: e.target.value}))}
-                        className="w-full bg-base-200 border border-base-300 rounded p-2 mt-2"
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        <input 
+                            type="text" 
+                            value={editedCategory.name} 
+                            onChange={e => setEditedCategory(prev => ({...prev, name: e.target.value}))}
+                            className="w-full bg-base-200 border border-base-300 rounded p-2"
+                        />
+                         <div className="flex items-center gap-2">
+                            {selectedIconSvg && <div className="w-8 h-8 text-primary flex-shrink-0" dangerouslySetInnerHTML={{ __html: selectedIconSvg }} />}
+                            <select 
+                                value={editedCategory.iconId || ''} 
+                                onChange={e => setEditedCategory(prev => ({ ...prev, iconId: e.target.value || null }))}
+                                className="w-full bg-base-200 border border-base-300 rounded p-2"
+                            >
+                                <option value="">- Выбрать иконку -</option>
+                                {icons.map(icon => (
+                                    <option key={icon.id} value={icon.id}>{icon.name}</option>
+                                ))}
+                            </select>
+                         </div>
+                     </div>
                 </div>
                 <div className="p-4 space-y-3 overflow-y-auto">
                     <h3 className="font-semibold">Поля категории</h3>
@@ -133,20 +156,25 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave
 
 const CategoriesPage: React.FC = () => {
     const [categories, setCategories] = useState<CategorySchema[]>([]);
+    const [icons, setIcons] = useState<AdminIcon[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingCategory, setEditingCategory] = useState<CategorySchema | null>(null);
 
     useEffect(() => {
-        fetchCategories();
+        fetchData();
     }, []);
     
-    const fetchCategories = async () => {
+    const fetchData = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getCategories();
-            setCategories(result);
+            const [catResult, iconResult] = await Promise.all([
+                backendApiService.getCategories(),
+                adminApiService.getIcons() // Icons are UI-specific, mock is fine
+            ]);
+            setCategories(catResult);
+            setIcons(iconResult);
         } catch (error) {
-            console.error("Failed to fetch categories", error);
+            console.error("Failed to fetch page data", error);
         } finally {
             setIsLoading(false);
         }
@@ -160,17 +188,22 @@ const CategoriesPage: React.FC = () => {
         const newCategory: CategorySchema = {
             id: `new_cat_${Date.now()}`,
             name: 'Новая категория',
+            iconId: null,
             fields: [],
         };
         setEditingCategory(newCategory);
     };
 
     const handleSave = async (categoryToSave: CategorySchema) => {
-        // Here you would call the API to save the category
-        await adminApiService.updateCategory(categoryToSave);
-        // Refetch or update state optimistically
-        fetchCategories();
+        await backendApiService.updateCategory(categoryToSave);
+        fetchData();
     };
+
+    const getIconForCategory = (categoryId: string | null) => {
+        if (!categoryId) return null;
+        const icon = icons.find(i => i.id === categoryId);
+        return icon ? <div className="w-6 h-6 text-primary" dangerouslySetInnerHTML={{ __html: icon.svgContent }} /> : null;
+    }
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>;
@@ -190,7 +223,10 @@ const CategoriesPage: React.FC = () => {
                     {categories.map(cat => (
                         <div key={cat.id} className="bg-base-200 p-4 rounded-md">
                             <div className="flex justify-between items-center">
-                                <h3 className="font-bold text-lg">{cat.name}</h3>
+                                <div className="flex items-center gap-3">
+                                    {getIconForCategory(cat.iconId)}
+                                    <h3 className="font-bold text-lg">{cat.name}</h3>
+                                </div>
                                 <button onClick={() => handleEdit(cat)} className="text-sm text-sky-400 hover:underline">Редактировать</button>
                             </div>
                             <p className="text-xs text-base-content/70">{cat.fields.length} полей</p>

@@ -76,6 +76,7 @@ export interface CategoryField {
 export interface CategorySchema {
     id: string;
     name: string;
+    iconId: string | null;
     fields: CategoryField[];
 }
 
@@ -114,8 +115,8 @@ let mockOrders: AdminPanelOrder[] = [
 ];
 
 let mockCategories: CategorySchema[] = [
-    { id: 'cat-1', name: 'Электроника', fields: [{ id: 'f1', name: 'brand', label: 'Бренд', type: 'text', required: true, options: [] }] },
-    { id: 'cat-2', name: 'Товары ручной работы', fields: [{ id: 'f2', name: 'material', label: 'Материал', type: 'text', required: true, options: [] }] },
+    { id: 'cat-1', name: 'Электроника', iconId: 'icon-1', fields: [{ id: 'f1', name: 'brand', label: 'Бренд', type: 'text', required: true, options: [] }] },
+    { id: 'cat-2', name: 'Товары ручной работы', iconId: null, fields: [{ id: 'f2', name: 'material', label: 'Материал', type: 'text', required: true, options: [] }] },
 ];
 
 let mockIcons: AdminIcon[] = [
@@ -197,6 +198,11 @@ export const adminApiService = {
     getIcons: async (): Promise<AdminIcon[]> => {
         await delay(300);
         return [...mockIcons];
+    },
+
+    getIconById: async (id: string): Promise<AdminIcon | undefined> => {
+        await delay(50);
+        return mockIcons.find(icon => icon.id === id);
     },
 
     addIcon: async (icon: Omit<AdminIcon, 'id'>): Promise<AdminIcon> => {

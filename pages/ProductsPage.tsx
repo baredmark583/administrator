@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApiService, AdminPanelProduct } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
 import ProductsTable from '../components/ProductsTable';
 import ProductModerationModal from '../components/ProductModerationModal';
 
@@ -13,7 +14,7 @@ const ProductsPage: React.FC = () => {
     const fetchProducts = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getProducts();
+            const result = await backendApiService.getProducts();
             setProducts(result);
         } catch (error) {
             console.error("Failed to fetch products", error);
@@ -51,6 +52,7 @@ const ProductsPage: React.FC = () => {
         setModeratingProduct(null);
 
         try {
+            // Note: This only updates the status in the mock service for now.
             await adminApiService.updateProductStatus(updatedProduct);
         } catch (error) {
             console.error("Failed to update product status:", error);

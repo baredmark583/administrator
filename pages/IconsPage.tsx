@@ -124,10 +124,13 @@ const IconsPage: React.FC = () => {
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-3xl font-bold text-white">Библиотека Иконок</h1>
+                <h1 className="text-3xl font-bold text-white">Библиотека UI Иконок</h1>
                 <button onClick={() => setIsModalOpen(true)} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
                     + Добавить иконку
                 </button>
+            </div>
+             <div className="bg-base-300/50 p-4 rounded-lg mb-6 text-base-content/80 text-sm">
+                Здесь хранятся иконки, используемые в интерфейсе всего приложения (например, "Корзина", "Профиль", "Назад" и т.д.). Иконки для категорий товаров назначаются непосредственно при <a href="/products/categories" className="text-primary hover:underline font-semibold">редактировании категории</a>.
             </div>
 
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">

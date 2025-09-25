@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApiService, AdminPanelUser } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
 import UsersTable from '../components/UsersTable';
 import EditUserModal from '../components/EditUserModal';
 
@@ -12,7 +13,7 @@ const UsersPage: React.FC = () => {
     const fetchUsers = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getUsers();
+            const result = await backendApiService.getUsers();
             setUsers(result);
         } catch (error) {
             console.error("Failed to fetch users", error);
@@ -48,7 +49,7 @@ const UsersPage: React.FC = () => {
         setEditingUser(null);
         
         try {
-            await adminApiService.updateUser(updatedUser);
+            await backendApiService.updateUser(updatedUser);
         } catch (error) {
             console.error("Failed to update user:", error);
             // Revert on error
@@ -66,7 +67,9 @@ const UsersPage: React.FC = () => {
         setUsers(prevUsers => prevUsers.map(u => u.id === userId ? updatedUser : u));
         
         try {
-            await adminApiService.updateUser(updatedUser);
+            // Note: 'isBlocked' is a UI-only feature for now, backend doesn't support it yet.
+            // We call updateUser to save other potential changes.
+            await backendApiService.updateUser(updatedUser);
         } catch (error) {
             console.error("Failed to block/unblock user:", error);
             alert("Ошибка. Данные будут возвращены к исходному состоянию.");
