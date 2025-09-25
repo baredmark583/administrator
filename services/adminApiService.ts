@@ -35,7 +35,8 @@ export interface AdminPanelOrder {
     sellerName: string;
     date: string;
     total: number;
-    status: 'Processing' | 'Shipped' | 'Completed' | 'Cancelled';
+    // FIX: The status type was updated to match the backend's OrderStatus enum, ensuring type consistency.
+    status: 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'DISPUTED' | 'COMPLETED' | 'CANCELLED';
     items: {
         productId: string;
         title: string;
@@ -97,9 +98,9 @@ export interface AdminIcon {
 // --- MOCK DATA (Only for modules NOT yet on backend) ---
 
 let mockOrders: AdminPanelOrder[] = [
-    { id: 'order-abc', customerName: 'John Doe', sellerName: 'Pottery Master', date: '2023-10-25', total: 70, status: 'Shipped', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 2, price: 35 }], customerInfo: { name: 'John Doe', email: 'john@example.com', shippingAddress: '123 Craft Lane, Kiev' } },
-    { id: 'order-def', customerName: 'Jane Smith', sellerName: 'Jewelry Queen', date: '2023-10-24', total: 120, status: 'Completed', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 1, price: 120 }], customerInfo: { name: 'Jane Smith', email: 'jane@example.com', shippingAddress: '456 Art St, Lviv' } },
-    { id: 'order-ghi', customerName: 'Alex Ray', sellerName: 'Jewelry Queen', date: '2023-10-26', total: 240, status: 'Processing', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 2, price: 120 }], customerInfo: { name: 'Alex Ray', email: 'alex@example.com', shippingAddress: '789 Design Ave, Odessa' } },
+    { id: 'order-abc', customerName: 'John Doe', sellerName: 'Pottery Master', date: '2023-10-25', total: 70, status: 'SHIPPED', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 2, price: 35 }], customerInfo: { name: 'John Doe', email: 'john@example.com', shippingAddress: '123 Craft Lane, Kiev' } },
+    { id: 'order-def', customerName: 'Jane Smith', sellerName: 'Jewelry Queen', date: '2023-10-24', total: 120, status: 'COMPLETED', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 1, price: 120 }], customerInfo: { name: 'Jane Smith', email: 'jane@example.com', shippingAddress: '456 Art St, Lviv' } },
+    { id: 'order-ghi', customerName: 'Alex Ray', sellerName: 'Jewelry Queen', date: '2023-10-26', total: 240, status: 'PAID', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 2, price: 120 }], customerInfo: { name: 'Alex Ray', email: 'alex@example.com', shippingAddress: '789 Design Ave, Odessa' } },
 ];
 
 

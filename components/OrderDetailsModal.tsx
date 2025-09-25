@@ -51,10 +51,13 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, o
                                 onChange={e => setCurrentStatus(e.target.value as AdminPanelOrder['status'])}
                                 className="w-full bg-base-300 border border-base-100 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary"
                              >
-                                <option value="Processing">В обработке</option>
-                                <option value="Shipped">Отправлен</option>
-                                <option value="Completed">Завершен</option>
-                                <option value="Cancelled">Отменен</option>
+                                <option value="PENDING">Ожидает оплаты</option>
+                                <option value="PAID">Оплачен</option>
+                                <option value="SHIPPED">Отправлен</option>
+                                <option value="DELIVERED">Доставлен</option>
+                                <option value="COMPLETED">Завершен</option>
+                                <option value="CANCELLED">Отменен</option>
+                                <option value="DISPUTED">Спор</option>
                             </select>
                         </div>
                     </div>

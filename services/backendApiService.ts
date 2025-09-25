@@ -8,7 +8,7 @@ const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://local
 
 const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   try {
-    const token = 'mock-admin-token';
+    const token = localStorage.getItem('adminToken');
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -60,8 +60,40 @@ const mapProductToAdminPanelProduct = (product: Product): AdminPanelProduct => (
     rejectionReason: product.rejectionReason,
 });
 
+// A temporary type to represent the shape of the order data coming from the backend.
+type BackendOrder = any;
+
+const mapOrderToAdminPanelOrder = (order: BackendOrder): AdminPanelOrder => ({
+  id: order.id,
+  customerName: order.buyer.name,
+  sellerName: order.seller.name,
+  date: new Date(order.createdAt).toISOString().split('T')[0],
+  total: order.total,
+  status: order.status,
+  items: order.items.map(item => ({
+    productId: item.product.id,
+    title: item.product.title,
+    imageUrl: item.product.imageUrls[0],
+    quantity: item.quantity,
+    price: item.price,
+  })),
+  customerInfo: {
+    name: order.buyer.name,
+    email: order.buyer.email || `tg_id_${order.buyer.telegramId}`,
+    shippingAddress: `${order.shippingAddress.city}, ${order.shippingAddress.postOffice}`,
+  },
+});
+
 
 export const backendApiService = {
+  // FIX: Added missing login method.
+  login: async (email, password) => {
+    return apiFetch('/auth/admin/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+  },
+  
   // Users
   getUsers: async (): Promise<AdminPanelUser[]> => {
     const users: User[] = await apiFetch('/users');
@@ -93,6 +125,22 @@ export const backendApiService = {
       });
   },
   
+  // FIX: Added missing getOrders method.
+  getOrders: async (): Promise<AdminPanelOrder[]> => {
+    const orders: BackendOrder[] = await apiFetch('/orders');
+    return orders.map(mapOrderToAdminPanelOrder);
+  },
+  
+  // FIX: Added missing updateOrder method.
+  updateOrder: async (order: AdminPanelOrder): Promise<AdminPanelOrder> => {
+    const updates = { status: order.status };
+    const updatedOrder: BackendOrder = await apiFetch(`/orders/${order.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+    });
+    return mapOrderToAdminPanelOrder(updatedOrder);
+  },
+
   // Categories
   getCategories: async (): Promise<CategorySchema[]> => {
     return apiFetch('/categories');

@@ -7,15 +7,21 @@ interface OrdersTableProps {
 }
 
 const StatusBadge: React.FC<{ status: AdminPanelOrder['status'] }> = ({ status }) => {
-    const styles = {
-        'Processing': 'bg-blue-500/20 text-blue-300',
-        'Shipped': 'bg-sky-500/20 text-sky-300',
-        'Completed': 'bg-green-500/20 text-green-300',
-        'Cancelled': 'bg-red-500/20 text-red-300',
+    const statusMap = {
+        'PAID': { text: 'Оплачен', style: 'bg-blue-500/20 text-blue-300' },
+        'SHIPPED': { text: 'Отправлен', style: 'bg-sky-500/20 text-sky-300' },
+        'DELIVERED': { text: 'Доставлен', style: 'bg-teal-500/20 text-teal-300' },
+        'COMPLETED': { text: 'Завершен', style: 'bg-green-500/20 text-green-300' },
+        'CANCELLED': { text: 'Отменен', style: 'bg-red-500/20 text-red-300' },
+        'DISPUTED': { text: 'Спор', style: 'bg-yellow-500/20 text-yellow-300' },
+        'PENDING': { text: 'Ожидает оплаты', style: 'bg-gray-500/20 text-gray-300' },
     };
+    
+    const { text, style } = statusMap[status] || { text: status, style: 'bg-gray-500/20 text-gray-300' };
+
     return (
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${styles[status]}`}>
-            {status}
+        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${style}`}>
+            {text}
         </span>
     );
 };
@@ -37,7 +43,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewDetails }) => {
                 <tbody>
                     {orders.map((order) => (
                         <tr key={order.id} className="bg-base-100 border-b border-base-300 hover:bg-base-300/50">
-                            <td className="px-6 py-4 font-mono text-white whitespace-nowrap">{order.id}</td>
+                            <td className="px-6 py-4 font-mono text-white whitespace-nowrap">{order.id.slice(0, 8)}...</td>
                             <td className="px-6 py-4 font-medium text-white">{order.customerName}</td>
                             <td className="px-6 py-4">{order.date}</td>
                             <td className="px-6 py-4 font-mono">{order.total.toFixed(2)} USDT</td>

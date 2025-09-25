@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import { backendApiService } from '../services/backendApiService';
 
-// For now, this is a mock. In the future, it would hold admin user details.
 interface AdminUser {
     email: string;
-    role: 'SUPER_ADMIN' | 'MODERATOR';
+    role: 'SUPER_ADMIN' | 'MODERATOR' | 'admin';
 }
 
 interface AdminAuthContextType {
@@ -17,36 +17,52 @@ interface AdminAuthContextType {
 
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
-// Mock implementation
 export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // We'll start with a logged-in state for development convenience.
-  // Set to `null` to test the login page.
-  const [user, setUser] = useState<AdminUser | null>({ email: 'superadmin@cryptocraft.app', role: 'SUPER_ADMIN' });
-  const [token, setToken] = useState<string | null>('mock-admin-token');
-  const [isLoading, setIsLoading] = useState(false); // No initial loading needed for mock
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('adminToken'));
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if a token exists and is valid on initial load (optional, but good practice)
+    // For this implementation, we just trust the stored token if it exists.
+    if (token) {
+        // In a real app, you would validate the token against a '/auth/me' endpoint here.
+        // For now, we'll just set a mock user if a token is found.
+        setUser({ email: 'superadmin@cryptocraft.app', role: 'admin' });
+    }
+    setIsLoading(false);
+  }, [token]);
+
 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
-    // Simulate API call
-    await new Promise(res => setTimeout(res, 1000));
-    if (email === 'admin' && pass === 'admin') {
-        setUser({ email: 'superadmin@cryptocraft.app', role: 'SUPER_ADMIN' });
-        setToken('mock-admin-token');
-    } else {
-        throw new Error('Invalid credentials');
+    try {
+        // FIX: Corrected service call to use `backendApiService` which handles real API calls.
+        const { access_token, user: adminUser } = await backendApiService.login(email, pass);
+        localStorage.setItem('adminToken', access_token);
+        setToken(access_token);
+        setUser(adminUser);
+    } catch (error) {
+        // Clear any stale tokens on login failure
+        localStorage.removeItem('adminToken');
+        setToken(null);
+        setUser(null);
+        throw error; // Re-throw for the login page to handle
+    } finally {
+        setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
+    localStorage.removeItem('adminToken');
   };
 
   const value = useMemo(() => ({
     user,
     token,
-    isAuthenticated: !!user,
+    isAuthenticated: !!user && !!token,
     isLoading,
     login,
     logout,

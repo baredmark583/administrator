@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { adminApiService, AdminPanelOrder } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
+import type { AdminPanelOrder } from '../services/adminApiService';
 import OrdersTable from '../components/OrdersTable';
 import OrderDetailsModal from '../components/OrderDetailsModal';
 
@@ -13,7 +14,8 @@ const OrdersPage: React.FC = () => {
     const fetchOrders = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getOrders();
+            // FIX: Corrected the service call to use the implemented `getOrders` method.
+            const result = await backendApiService.getOrders();
             setOrders(result);
         } catch (error) {
             console.error("Failed to fetch orders", error);
@@ -51,7 +53,8 @@ const OrdersPage: React.FC = () => {
         setViewingOrder(null);
         
         try {
-            await adminApiService.updateOrderStatus(updatedOrder);
+            // FIX: Corrected the service call to use the implemented `updateOrder` method.
+            await backendApiService.updateOrder(updatedOrder);
         } catch (error) {
             console.error("Failed to update order status:", error);
             alert("Ошибка сохранения статуса. Данные будут возвращены к исходному состоянию.");
@@ -78,10 +81,12 @@ const OrdersPage: React.FC = () => {
                         className="w-full sm:max-w-xs bg-base-300 border border-base-100 rounded-lg py-2 px-4 focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                         <option value="All">Все статусы</option>
-                        <option value="Processing">В обработке</option>
-                        <option value="Shipped">Отправленные</option>
-                        <option value="Completed">Завершенные</option>
-                        <option value="Cancelled">Отмененные</option>
+                        <option value="PAID">Оплачен</option>
+                        <option value="SHIPPED">Отправлен</option>
+                        <option value="DELIVERED">Доставлен</option>
+                        <option value="COMPLETED">Завершен</option>
+                        <option value="CANCELLED">Отменен</option>
+                        <option value="DISPUTED">Спор</option>
                     </select>
                 </div>
                 
