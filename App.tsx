@@ -1,7 +1,6 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AdminAuthProvider, useAdminAuth } from './hooks/useAdminAuth';
-
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
@@ -9,43 +8,56 @@ import UsersPage from './pages/UsersPage';
 import ProductsPage from './pages/ProductsPage';
 import OrdersPage from './pages/OrdersPage';
 import CategoriesPage from './pages/CategoriesPage';
-import IconsPage from './pages/IconsPage';
+import DisputesPage from './pages/DisputesPage';
+import FinancesPage from './pages/FinancesPage';
+import SettingsPage from './pages/SettingsPage';
 import DebugPage from './pages/DebugPage';
+import ProductModerationPage from './pages/ProductModerationPage';
 
-// Simple PrivateRoute component
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated, isLoading } = useAdminAuth();
-
-    if (isLoading) {
-        return <div className="w-screen h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div></div>;
-    }
-
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
-    }
-
-    return <>{children}</>;
+    const { isAuthenticated } = useAdminAuth();
+    return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
 };
 
+const AppContent: React.FC = () => {
+    const { isAuthenticated } = useAdminAuth();
+
+    return (
+        <Routes>
+            <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} />
+
+            <Route path="/*" element={
+                <PrivateRoute>
+                    <Layout>
+                        <Routes>
+                             <Route path="/dashboard" element={<DashboardPage />} />
+                             <Route path="/users" element={<UsersPage />} />
+                             <Route path="/products" element={<ProductsPage />} />
+                             <Route path="/products/moderation" element={<ProductModerationPage />} />
+                             <Route path="/products/categories" element={<CategoriesPage />} />
+                             <Route path="/orders" element={<OrdersPage />} />
+                             <Route path="/finances/transactions" element={<FinancesPage />} />
+                             <Route path="/finances/promocodes" element={<FinancesPage />} />
+                             <Route path="/disputes" element={<DisputesPage />} />
+                             <Route path="/settings" element={<SettingsPage />} />
+                             <Route path="/debug" element={<DebugPage />} />
+                             <Route path="/" element={<Navigate to="/dashboard" />} />
+                        </Routes>
+                    </Layout>
+                </PrivateRoute>
+            } />
+        </Routes>
+    );
+};
 
 const App: React.FC = () => {
-  return (
-    <AdminAuthProvider>
-        <Router>
-            <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/" element={<PrivateRoute><Layout><DashboardPage /></Layout></PrivateRoute>} />
-                <Route path="/dashboard" element={<PrivateRoute><Layout><DashboardPage /></Layout></PrivateRoute>} />
-                <Route path="/users" element={<PrivateRoute><Layout><UsersPage /></Layout></PrivateRoute>} />
-                <Route path="/products" element={<PrivateRoute><Layout><ProductsPage /></Layout></PrivateRoute>} />
-                <Route path="/orders" element={<PrivateRoute><Layout><OrdersPage /></Layout></PrivateRoute>} />
-                <Route path="/content/categories" element={<PrivateRoute><Layout><CategoriesPage /></Layout></PrivateRoute>} />
-                <Route path="/content/icons" element={<PrivateRoute><Layout><IconsPage /></Layout></PrivateRoute>} />
-                <Route path="/debug" element={<PrivateRoute><Layout><DebugPage /></Layout></PrivateRoute>} />
-            </Routes>
-        </Router>
-    </AdminAuthProvider>
-  );
+    return (
+        <AdminAuthProvider>
+            <Router>
+                <AppContent />
+            </Router>
+        </AdminAuthProvider>
+    );
 };
 
 export default App;

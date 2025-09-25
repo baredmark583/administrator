@@ -1,27 +1,13 @@
-// Mock API service for the admin panel
+// A mock API service for the admin panel.
+// This simulates fetching and updating data that an admin would manage.
 
-export interface KpiData {
-    totalRevenue: number;
-    platformProfit: number;
-    newUsers: number;
-    productsForModeration: number;
-}
-
-export interface SalesChartDataPoint {
-    name: string;
-    sales: number;
-}
-
-export interface AdminDashboardData {
-    kpis: KpiData;
-    salesData: SalesChartDataPoint[];
-}
+// --- TYPES ---
 
 export interface AdminPanelUser {
     id: string;
-    avatarUrl: string;
     name: string;
     email: string;
+    avatarUrl: string;
     registrationDate: string;
     status: 'Pro' | 'Standard';
     balance: number;
@@ -30,65 +16,67 @@ export interface AdminPanelUser {
 
 export interface AdminPanelProduct {
     id: string;
-    imageUrls: string[];
     title: string;
-    description: string;
     sellerName: string;
     sellerId: string;
+    imageUrls: string[];
+    description: string;
+    dynamicAttributes: Record<string, string | number>;
     category: string;
     price: number;
     status: 'Active' | 'Pending Moderation' | 'Rejected';
     dateAdded: string;
-    dynamicAttributes: Record<string, string | number>;
     rejectionReason?: string;
-}
-
-export interface OrderItem {
-    productId: string;
-    imageUrl: string;
-    title: string;
-    quantity: number;
-    price: number;
-}
-
-export interface OrderCustomerInfo {
-    id: string;
-    name: string;
-    email: string;
-    shippingAddress: string;
 }
 
 export interface AdminPanelOrder {
     id: string;
     customerName: string;
+    sellerName: string;
     date: string;
     total: number;
     status: 'Processing' | 'Shipped' | 'Completed' | 'Cancelled';
-    items: OrderItem[];
-    customerInfo: OrderCustomerInfo;
-    sellerName: string;
+    items: {
+        productId: string;
+        title: string;
+        imageUrl: string;
+        quantity: number;
+        price: number;
+    }[];
+    customerInfo: {
+        name: string;
+        email: string;
+        shippingAddress: string;
+    };
+}
+
+export interface SalesChartDataPoint {
+    name: string;
+    sales: number;
+}
+
+export interface AdminDashboardData {
+    kpis: {
+        totalRevenue: number;
+        platformProfit: number;
+        newUsers: number;
+        productsForModeration: number;
+    };
+    salesData: SalesChartDataPoint[];
 }
 
 export interface CategoryField {
-  id: string;
-  name: string;
-  label: string;
-  type: 'text' | 'number' | 'select';
-  required: boolean;
-  options: string[];
-}
-
-export interface CategorySchema {
-  id: string;
-  name: string;
-  fields: CategoryField[];
-}
-
-export interface AdminIcon {
     id: string;
     name: string;
-    type: 'url' | 'svg';
-    content: string; // URL or SVG content
+    label: string;
+    type: 'text' | 'number' | 'select';
+    required: boolean;
+    options: string[];
+}
+export interface CategorySchema {
+    id: string;
+    name: string;
+    fields: CategoryField[];
 }
 
 export interface AdminLog {
@@ -100,176 +88,92 @@ export interface AdminLog {
 
 // --- MOCK DATA ---
 
-// Generate mock sales data for the last 30 days
-const generateMockSalesData = (): SalesChartDataPoint[] => {
-    const data: SalesChartDataPoint[] = [];
-    for (let i = 29; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const day = date.getDate();
-        const month = date.getMonth() + 1;
-        
-        const sales = 2000 + (30 - i) * 100 + Math.random() * 500 - 250;
-        
-        data.push({
-            name: `${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}`,
-            sales: Math.round(sales),
-        });
-    }
-    return data;
-};
-
 let mockUsers: AdminPanelUser[] = [
-    { id: 'usr_1a2b3c', avatarUrl: 'https://picsum.photos/seed/user1/40/40', name: 'Elena Petrova', email: 'elena.p@example.com', registrationDate: '2023-10-26', status: 'Pro', balance: 1250.75, isBlocked: false },
-    { id: 'usr_4d5e6f', avatarUrl: 'https://picsum.photos/seed/user2/40/40', name: 'Ivan Morozov', email: 'ivan.m@example.com', registrationDate: '2023-11-15', status: 'Standard', balance: 250.00, isBlocked: false },
-    { id: 'usr_7g8h9i', avatarUrl: 'https://picsum.photos/seed/user3/40/40', name: 'Anna Kovalenko', email: 'anna.k@example.com', registrationDate: '2023-09-01', status: 'Pro', balance: 5300.10, isBlocked: true },
-    { id: 'usr_j1k2l3', avatarUrl: 'https://picsum.photos/seed/user4/40/40', name: 'Sergey Volkov', email: 'sergey.v@example.com', registrationDate: '2024-01-05', status: 'Standard', balance: 50.25, isBlocked: false },
+    { id: 'user-1', name: 'Pottery Master', email: 'pottery@example.com', avatarUrl: 'https://picsum.photos/seed/seller1/100/100', registrationDate: '2023-10-01', status: 'Pro', balance: 1250.75, isBlocked: false },
+    { id: 'user-2', name: 'Jewelry Queen', email: 'jewelry@example.com', avatarUrl: 'https://picsum.photos/seed/seller2/100/100', registrationDate: '2023-10-05', status: 'Standard', balance: 2500, isBlocked: false },
+    { id: 'user-3', name: 'Leather Crafter', email: 'leather@example.com', avatarUrl: 'https://picsum.photos/seed/seller3/100/100', registrationDate: '2023-10-15', status: 'Standard', balance: 500, isBlocked: true },
 ];
 
 let mockProducts: AdminPanelProduct[] = [
-    { id: 'prod_abc1', imageUrls: ['https://picsum.photos/seed/prod1/400/300', 'https://picsum.photos/seed/prod1_2/400/300'], title: 'Handmade Ceramic Mug', description: 'A beautiful, one-of-a-kind ceramic mug, perfect for your morning coffee.', sellerName: 'Elena Petrova', sellerId: 'usr_1a2b3c', category: 'Товары ручной работы', price: 35.00, status: 'Active', dateAdded: '2024-05-20', dynamicAttributes: {'Материал': 'Керамика', 'Объем (мл)': 350} },
-    { id: 'prod_def2', imageUrls: ['https://picsum.photos/seed/prod5/400/300'], title: 'Игровой ноутбук Razer Blade 15', description: 'Мощный игровой ноутбук в отличном состоянии. Intel Core i7, RTX 3070, 16GB RAM, 1TB SSD.', sellerName: 'Sergey Volkov', sellerId: 'usr_j1k2l3', category: 'Электроника', price: 1150.00, status: 'Pending Moderation', dateAdded: '2024-05-21', dynamicAttributes: { 'Бренд': 'Razer', 'Модель': 'Blade 15', 'Состояние': 'Б/у' } },
-    { id: 'prod_ghi3', imageUrls: ['https://picsum.photos/seed/prod2/400/300'], title: 'Silver Necklace with Moonstone', description: 'Elegant sterling silver necklace featuring a mesmerizing moonstone pendant.', sellerName: 'Anna Kovalenko', sellerId: 'usr_7g8h9i', category: 'Ювелирные изделия', price: 120.00, status: 'Active', dateAdded: '2024-05-18', dynamicAttributes: {'Металл': 'Серебро 925', 'Камень': 'Лунный камень'} },
+    { id: 'prod-1', title: 'Handmade Ceramic Mug', sellerName: 'Pottery Master', sellerId: 'user-1', imageUrls: ['https://picsum.photos/seed/prod1/600/400'], description: "A beautiful mug.", dynamicAttributes: { "Material": "Ceramic" }, category: 'Handmade', price: 35, status: 'Active', dateAdded: '2023-10-02' },
+    { id: 'prod-2', title: 'Silver Necklace', sellerName: 'Jewelry Queen', sellerId: 'user-2', imageUrls: ['https://picsum.photos/seed/prod2/600/400'], description: "An elegant necklace.", dynamicAttributes: { "Metal": "Silver" }, category: 'Jewelry', price: 120, status: 'Active', dateAdded: '2023-10-06' },
+    { id: 'prod-3', title: 'Forbidden Item', sellerName: 'Leather Crafter', sellerId: 'user-3', imageUrls: ['https://picsum.photos/seed/prod3/600/400'], description: "This item violates our terms of service.", dynamicAttributes: { "Material": "Forbidden" }, category: 'Handmade', price: 999, status: 'Pending Moderation', dateAdded: '2023-10-20' },
+    { id: 'prod-4', title: 'Poor Quality Photo', sellerName: 'Pottery Master', sellerId: 'user-1', imageUrls: ['https://picsum.photos/seed/prod4/600/400'], description: "A blurry photo.", dynamicAttributes: { "Material": "Clay" }, category: 'Handmade', price: 20, status: 'Rejected', dateAdded: '2023-10-21', rejectionReason: 'Low quality images' },
 ];
 
 let mockOrders: AdminPanelOrder[] = [
-    { 
-        id: 'ORD-202405-001', 
-        customerName: 'Ivan Morozov', 
-        date: '2024-05-21', 
-        total: 35.00, 
-        status: 'Processing',
-        items: [
-            { productId: 'prod_abc1', imageUrl: 'https://picsum.photos/seed/prod1/40/40', title: 'Handmade Ceramic Mug', quantity: 1, price: 35.00 }
-        ],
-        customerInfo: { id: 'usr_4d5e6f', name: 'Ivan Morozov', email: 'ivan.m@example.com', shippingAddress: 'г. Киев, Новая Почта #15, +380501234567' },
-        sellerName: 'Elena Petrova'
-    },
-    { 
-        id: 'ORD-202405-002', 
-        customerName: 'Elena Petrova', 
-        date: '2024-05-20', 
-        total: 1150.00, 
-        status: 'Shipped',
-        items: [
-            { productId: 'prod_def2', imageUrl: 'https://picsum.photos/seed/prod5/40/40', title: 'Игровой ноутбук Razer Blade 15', quantity: 1, price: 1150.00 }
-        ],
-        customerInfo: { id: 'usr_1a2b3c', name: 'Elena Petrova', email: 'elena.p@example.com', shippingAddress: 'г. Львов, Новая Почта #3, +380997654321' },
-        sellerName: 'Sergey Volkov'
-    },
-    { 
-        id: 'ORD-202405-003', 
-        customerName: 'Sergey Volkov', 
-        date: '2024-05-19', 
-        total: 275.00, 
-        status: 'Completed',
-        items: [
-            { productId: 'prod_ghi3', imageUrl: 'https://picsum.photos/seed/prod2/40/40', title: 'Silver Necklace with Moonstone', quantity: 2, price: 120.00 },
-            { productId: 'prod_abc1', imageUrl: 'https://picsum.photos/seed/prod1/40/40', title: 'Handmade Ceramic Mug', quantity: 1, price: 35.00 }
-        ],
-        customerInfo: { id: 'usr_j1k2l3', name: 'Sergey Volkov', email: 'sergey.v@example.com', shippingAddress: 'г. Одесса, Новая Почта #22, +380671112233' },
-        sellerName: 'Anna Kovalenko'
-    },
+    { id: 'order-abc', customerName: 'John Doe', sellerName: 'Pottery Master', date: '2023-10-25', total: 70, status: 'Shipped', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 2, price: 35 }], customerInfo: { name: 'John Doe', email: 'john@example.com', shippingAddress: '123 Craft Lane, Kiev' } },
+    { id: 'order-def', customerName: 'Jane Smith', sellerName: 'Jewelry Queen', date: '2023-10-24', total: 120, status: 'Completed', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 1, price: 120 }], customerInfo: { name: 'Jane Smith', email: 'jane@example.com', shippingAddress: '456 Art St, Lviv' } },
+    { id: 'order-ghi', customerName: 'Alex Ray', sellerName: 'Jewelry Queen', date: '2023-10-26', total: 240, status: 'Processing', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 2, price: 120 }], customerInfo: { name: 'Alex Ray', email: 'alex@example.com', shippingAddress: '789 Design Ave, Odessa' } },
 ];
 
 let mockCategories: CategorySchema[] = [
-    {
-        id: 'cat_electronics',
-        name: 'Электроника',
-        fields: [
-            { id: 'f_brand', name: 'brand', label: 'Бренд', type: 'text', required: true, options: [] },
-            { id: 'f_model', name: 'model', label: 'Модель', type: 'text', required: true, options: [] },
-            { id: 'f_condition_el', name: 'condition', label: 'Состояние', type: 'select', required: true, options: ['Новое', 'Б/у', 'На запчасти'] },
-        ],
-    },
-    {
-        id: 'cat_handmade',
-        name: 'Товары ручной работы',
-        fields: [
-            { id: 'f_material', name: 'material', label: 'Основной материал', type: 'text', required: true, options: [] },
-            { id: 'f_color', name: 'color', label: 'Цвет', type: 'text', required: false, options: [] },
-        ],
-    },
-];
-
-const mockIcons: AdminIcon[] = [
-    { id: 'icon_art', name: 'Искусство', type: 'svg', content: '<path d="M10 3.5a.75.75 0 01.75.75v2.502a.75.75 0 01-1.5 0V4.25A.75.75 0 0110 3.5zM8.328 6.022a.75.75 0 011.06 0l.75.75a.75.75 0 01-1.06 1.06l-.75-.75a.75.75 0 010-1.06zM5.25 8.5a.75.75 0 000 1.5h.563a.75.75 0 000-1.5H5.25zM15.25 9.25a.75.75 0 01-.75-.75h-.563a.75.75 0 010-1.5h.563a.75.75 0 01.75.75v.75zM11.672 6.022a.75.75 0 011.06 0l.75.75a.75.75 0 01-1.06 1.06l-.75-.75a.75.75 0 010-1.06zM10 15.5a.75.75 0 01.75.75v.563a.75.75 0 01-1.5 0v-.563a.75.75 0 01.75-.75zM8.328 12.478a.75.75 0 011.06 0l.75.75a.75.75 0 01-1.06 1.06l-.75-.75a.75.75 0 010-1.06zM5.25 10.75a.75.75 0 000 1.5h.563a.75.75 0 000-1.5H5.25zM15.25 11.5a.75.75 0 01-.75-.75h-.563a.75.75 0 010-1.5h.563a.75.75 0 01.75.75v.75zM11.672 12.478a.75.75 0 011.06 0l.75.75a.75.75 0 01-1.06 1.06l-.75-.75a.75.75 0 010-1.06zM10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 000 12z" />'},
-    { id: 'icon_cars', name: 'Автомобили', type: 'url', content: 'https://api.iconify.design/mdi:car.svg' },
+    { id: 'cat-1', name: 'Электроника', fields: [{ id: 'f1', name: 'brand', label: 'Бренд', type: 'text', required: true, options: [] }] },
+    { id: 'cat-2', name: 'Товары ручной работы', fields: [{ id: 'f2', name: 'material', label: 'Материал', type: 'text', required: true, options: [] }] },
 ];
 
 
-const mockDashboardData: AdminDashboardData = {
-    kpis: {
-        totalRevenue: 125430,
-        platformProfit: 12543,
-        newUsers: 134,
-        productsForModeration: mockProducts.filter(p => p.status === 'Pending Moderation').length,
-    },
-    salesData: generateMockSalesData(),
-};
+// --- MOCK API SERVICE ---
 
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export const adminApiService = {
     getDashboardData: async (): Promise<AdminDashboardData> => {
-        await new Promise(res => setTimeout(res, 800));
-        return mockDashboardData;
+        await delay(800);
+        return {
+            kpis: {
+                totalRevenue: 157890.50,
+                platformProfit: 3157.81,
+                newUsers: 124,
+                productsForModeration: mockProducts.filter(p => p.status === 'Pending Moderation').length,
+            },
+            salesData: Array.from({ length: 30 }, (_, i) => ({
+                name: `Day ${i + 1}`,
+                sales: 2000 + Math.random() * 5000 + (i * 150),
+            })),
+        };
     },
 
     getUsers: async (): Promise<AdminPanelUser[]> => {
-        await new Promise(res => setTimeout(res, 1000));
-        return mockUsers;
-    },
-
-    updateUser: async (updatedUser: AdminPanelUser): Promise<AdminPanelUser> => {
-        await new Promise(res => setTimeout(res, 500));
-        const index = mockUsers.findIndex(u => u.id === updatedUser.id);
-        if (index > -1) {
-            mockUsers[index] = updatedUser;
-        } else {
-            throw new Error("User not found");
-        }
-        return updatedUser;
+        await delay(500);
+        return [...mockUsers];
     },
     
-    getProducts: async (): Promise<AdminPanelProduct[]> => {
-        await new Promise(res => setTimeout(res, 1000));
-        return mockProducts;
+    updateUser: async (user: AdminPanelUser): Promise<AdminPanelUser> => {
+        await delay(500);
+        mockUsers = mockUsers.map(u => u.id === user.id ? user : u);
+        return user;
     },
 
-    updateProductStatus: async (updatedProduct: AdminPanelProduct): Promise<AdminPanelProduct> => {
-        await new Promise(res => setTimeout(res, 500));
-        const index = mockProducts.findIndex(p => p.id === updatedProduct.id);
-        if (index > -1) {
-            mockProducts[index] = updatedProduct;
-        } else {
-            throw new Error("Product not found");
-        }
-        return updatedProduct;
+    getProducts: async (): Promise<AdminPanelProduct[]> => {
+        await delay(700);
+        return [...mockProducts];
+    },
+    
+    updateProductStatus: async (product: AdminPanelProduct): Promise<AdminPanelProduct> => {
+        await delay(500);
+        mockProducts = mockProducts.map(p => p.id === product.id ? product : p);
+        return product;
     },
     
     getOrders: async (): Promise<AdminPanelOrder[]> => {
-        await new Promise(res => setTimeout(res, 1000));
-        return mockOrders;
+        await delay(600);
+        return [...mockOrders];
     },
     
-    updateOrderStatus: async (updatedOrder: AdminPanelOrder): Promise<AdminPanelOrder> => {
-        await new Promise(res => setTimeout(res, 500));
-        const index = mockOrders.findIndex(o => o.id === updatedOrder.id);
-        if (index > -1) {
-            mockOrders[index] = updatedOrder;
-        } else {
-            throw new Error("Order not found");
-        }
-        return updatedOrder;
+    updateOrderStatus: async (order: AdminPanelOrder): Promise<AdminPanelOrder> => {
+        await delay(400);
+        mockOrders = mockOrders.map(o => o.id === order.id ? order : o);
+        return order;
     },
-
+    
     getCategories: async (): Promise<CategorySchema[]> => {
-        await new Promise(res => setTimeout(res, 500));
-        return JSON.parse(JSON.stringify(mockCategories)); // Return a deep copy
+        await delay(300);
+        return [...mockCategories];
     },
-
+    
     updateCategory: async (category: CategorySchema): Promise<CategorySchema> => {
-        await new Promise(res => setTimeout(res, 500));
+        await delay(500);
         const index = mockCategories.findIndex(c => c.id === category.id);
         if (index > -1) {
             mockCategories[index] = category;
@@ -278,39 +182,30 @@ export const adminApiService = {
         }
         return category;
     },
-
-    getIcons: async (): Promise<AdminIcon[]> => {
-        await new Promise(res => setTimeout(res, 500));
-        return mockIcons;
-    },
     
-    // Simulates a WebSocket connection for logs
+    // Log streaming simulation
     subscribeToLogs: (callback: (log: AdminLog) => void): (() => void) => {
-        const mockLogMessages = [
-            "User 'elena.p@example.com' logged in successfully.",
-            "New product 'Старинная ваза' created by seller 'usr_7g8h9i'.",
-            "Payment of 35.00 USDT received for order 'ORD-202405-001'.",
-            "Database connection timeout on replica-2.",
-            "User 'ivan.m@example.com' updated their profile.",
-            "Image upload failed: file size exceeds limit (15MB).",
-            "New order 'ORD-202405-004' created, total 150.00 USDT.",
-            "API rate limit exceeded for IP 192.168.1.100.",
+        const mockLogSources = ["API", "Database", "Auth", "Payments"];
+        const mockMessages = [
+            "User logged in successfully",
+            "Product fetch query executed",
+            "Failed payment attempt",
+            "New user registration",
+            "Cache cleared"
         ];
-        const levels: AdminLog['level'][] = ['INFO', 'INFO', 'INFO', 'ERROR', 'INFO', 'WARN', 'INFO', 'WARN'];
-
-        const intervalId = setInterval(() => {
-            const randomIndex = Math.floor(Math.random() * mockLogMessages.length);
-            const log: AdminLog = {
+        
+        const interval = setInterval(() => {
+            const level: AdminLog['level'] = Math.random() > 0.9 ? 'ERROR' : Math.random() > 0.7 ? 'WARN' : 'INFO';
+            const message = `${mockLogSources[Math.floor(Math.random() * mockLogSources.length)]}: ${mockMessages[Math.floor(Math.random() * mockMessages.length)]}`;
+            
+            const newLog: AdminLog = {
                 timestamp: new Date(),
-                level: levels[randomIndex],
-                message: mockLogMessages[randomIndex],
+                level,
+                message: message + (level === 'ERROR' ? ` - Trace ID: ${Math.random().toString(36).substring(7)}` : ''),
             };
-            callback(log);
-        }, 2000); // Send a new log every 2 seconds
+            callback(newLog);
+        }, 3000); // New log every 3 seconds
 
-        // Return a cleanup function to stop the interval
-        return () => {
-            clearInterval(intervalId);
-        };
+        return () => clearInterval(interval); // Unsubscribe function
     },
 };
