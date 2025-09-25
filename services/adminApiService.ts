@@ -90,6 +90,7 @@ export interface AdminIcon {
     id: string;
     name: string;
     svgContent: string;
+    iconUrl?: string;
 }
 
 

@@ -114,7 +114,7 @@ export const backendApiService = {
    getIcons: async (): Promise<AdminIcon[]> => {
        return apiFetch('/icons');
    },
-   createIcon: async (icon: Omit<AdminIcon, 'id'>): Promise<AdminIcon> => {
+   createIcon: async (icon: Partial<Omit<AdminIcon, 'id'>>): Promise<AdminIcon> => {
        return apiFetch('/icons', {
            method: 'POST',
            body: JSON.stringify(icon),
