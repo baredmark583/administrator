@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="cryptocraft_admin">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CryptoCraft - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#4cc9a3",
+              "primary-focus": "#3da887",
+              "primary-content": "#ffffff",
+              "secondary": "#2a785e",
+              "secondary-focus": "#205c48",
+              "secondary-content": "#ffffff",
+              "accent": "#ff8a65",
+              "accent-content": "#ffffff",
+              "neutral": "#293b34",
+              "neutral-content": "#f0f2f1",
+              "base-100": "#2d3748", 
+              "base-200": "#1a202c", 
+              "base-300": "#0f172a", 
+              "base-content": "#e2e8f0", 
+              "info": "#3ABFF8",
+              "success": "#36D399",
+              "warning": "#FBBD23",
+              "error": "#F87272",
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      @import url('https://rsms.me/inter/inter.css');
+      html { font-family: 'Inter', sans-serif; }
+      /* Custom scrollbar for webkit browsers */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1a202c; /* base-200 */
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #4a5568; /* A neutral gray */
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #718096;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.1",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1"
+  }
+}
+</script>
+</head>
+  <body class="bg-base-200">
+    <div id="root"></div>
+    <script type="module" src="/admin/index.tsx"></script>
+  </body>
+</html>
