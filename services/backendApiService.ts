@@ -1,7 +1,7 @@
 // This service handles all communication with the real NestJS backend for the admin panel.
 import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder } from './adminApiService';
 // Assuming the backend entities are similar enough to frontend types for this mapping
-import type { User, Product } from '../../types.ts'; 
+import type { User, Product } from '@/types'; 
 
 // --- REAL API IMPLEMENTATION ---
 
@@ -18,7 +18,7 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   try {
     // In a real scenario, the admin token would be managed securely.
     // For now, we use a mock token similar to the frontend's local dev setup.
-    const token = 'mock-auth-token-for-local-dev';
+    const token = 'mock-admin-token';
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
@@ -82,6 +82,7 @@ const mapProductToAdminPanelProduct = (product: Product): AdminPanelProduct => (
 const mapCategoryToAdminCategory = (category: any): CategorySchema => ({
     ...category,
     id: category.name, // Use name as ID if backend doesn't provide one
+    iconId: null, // Add default iconId
     fields: category.fields.map((f: any) => ({ ...f, id: f.name })),
 });
 
@@ -117,7 +118,7 @@ export const backendApiService = {
   getCategories: async (): Promise<CategorySchema[]> => {
     // There's no backend endpoint for categories, so we'll simulate it by returning the constants.
     // In a real app, this would be: `return apiFetch('/categories');`
-    const { CATEGORIES } = await import('../../constants.ts');
+    const { CATEGORIES } = await import('@/constants');
     return CATEGORIES.map(mapCategoryToAdminCategory);
   },
    updateCategory: async (category: CategorySchema): Promise<CategorySchema> => {
