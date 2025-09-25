@@ -1,8 +1,8 @@
 // This service handles all communication with the real NestJS backend for the admin panel.
 import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder } from './adminApiService';
 // Assuming the backend entities are similar enough to frontend types for this mapping
-import type { User, Product } from '@/types.ts'; 
-import { CATEGORIES } from '@/constants.ts';
+import type { User, Product } from '@/types'; 
+import { CATEGORIES } from '@/constants';
 
 // --- REAL API IMPLEMENTATION ---
 
