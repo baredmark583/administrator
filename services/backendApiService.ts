@@ -1,7 +1,7 @@
 // This service handles all communication with the real NestJS backend for the admin panel.
 import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder, AdminIcon } from './adminApiService';
 // Assuming the backend entities are similar enough to frontend types for this mapping
-import type { User, Product } from '../types'; 
+import type { User, Product } from '../../types'; 
 
 // --- REAL API IMPLEMENTATION ---
 const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -56,7 +56,7 @@ const mapProductToAdminPanelProduct = (product: Product): AdminPanelProduct => (
     category: product.category,
     price: product.price ?? 0,
     status: product.status || 'Pending Moderation',
-    dateAdded: new Date(product.createdAt).toISOString().split('T')[0],
+    dateAdded: new Date(product.createdAt || Date.now()).toISOString().split('T')[0],
     rejectionReason: product.rejectionReason,
 });
 
@@ -114,9 +114,9 @@ export const backendApiService = {
    getIcons: async (): Promise<AdminIcon[]> => {
        return apiFetch('/icons');
    },
-   createIcon: async (icon: Partial<Omit<AdminIcon, 'id'>>): Promise<AdminIcon> => {
-       return apiFetch('/icons', {
-           method: 'POST',
+   upsertIcon: async (icon: Partial<Omit<AdminIcon, 'id'>>): Promise<AdminIcon> => {
+       return apiFetch('/icons/upsert', {
+           method: 'PATCH',
            body: JSON.stringify(icon),
        });
    }

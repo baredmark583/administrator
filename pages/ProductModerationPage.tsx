@@ -33,6 +33,7 @@ const ProductModerationPage: React.FC = () => {
         setModeratingProduct(null);
 
         try {
+            // FIX: Pass the correct payload with status and rejectionReason to the backend service.
             await backendApiService.updateProduct(product.id, { status: newStatus, rejectionReason });
         } catch (error) {
             console.error("Failed to update product status:", error);
