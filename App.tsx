@@ -8,6 +8,9 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import ProductsPage from './pages/ProductsPage';
 import OrdersPage from './pages/OrdersPage';
+import CategoriesPage from './pages/CategoriesPage';
+import IconsPage from './pages/IconsPage';
+import DebugPage from './pages/DebugPage';
 
 // Simple PrivateRoute component
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -36,7 +39,9 @@ const App: React.FC = () => {
                 <Route path="/users" element={<PrivateRoute><Layout><UsersPage /></Layout></PrivateRoute>} />
                 <Route path="/products" element={<PrivateRoute><Layout><ProductsPage /></Layout></PrivateRoute>} />
                 <Route path="/orders" element={<PrivateRoute><Layout><OrdersPage /></Layout></PrivateRoute>} />
-                {/* Add other routes here as placeholders */}
+                <Route path="/content/categories" element={<PrivateRoute><Layout><CategoriesPage /></Layout></PrivateRoute>} />
+                <Route path="/content/icons" element={<PrivateRoute><Layout><IconsPage /></Layout></PrivateRoute>} />
+                <Route path="/debug" element={<PrivateRoute><Layout><DebugPage /></Layout></PrivateRoute>} />
             </Routes>
         </Router>
     </AdminAuthProvider>
