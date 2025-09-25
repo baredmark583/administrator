@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { adminApiService, AdminIcon } from '../services/adminApiService';
+import { AdminIcon } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
 
 // --- Components ---
 
@@ -98,7 +99,7 @@ const IconsPage: React.FC = () => {
     const fetchIcons = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getIcons();
+            const result = await backendApiService.getIcons();
             setIcons(result);
         } catch (error) {
             console.error("Failed to fetch icons", error);
@@ -113,7 +114,7 @@ const IconsPage: React.FC = () => {
 
     const handleSaveIcon = async (icon: Omit<AdminIcon, 'id'>) => {
         try {
-            await adminApiService.addIcon(icon);
+            await backendApiService.createIcon(icon);
             fetchIcons(); // Refetch to get the latest list
         } catch (error) {
             console.error("Failed to save icon:", error);

@@ -52,8 +52,8 @@ const ProductsPage: React.FC = () => {
         setModeratingProduct(null);
 
         try {
-            // Note: This only updates the status in the mock service for now.
-            await adminApiService.updateProductStatus(updatedProduct);
+            // FIX: Use the correct backendApiService to update the product status.
+            await backendApiService.updateProduct(product.id, { status: newStatus, rejectionReason });
         } catch (error) {
             console.error("Failed to update product status:", error);
             alert("Ошибка сохранения статуса. Данные будут возвращены к исходному состоянию.");

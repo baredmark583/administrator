@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { adminApiService, AdminPanelProduct } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
 import ProductsTable from '../components/ProductsTable';
 import ProductModerationModal from '../components/ProductModerationModal';
 
@@ -11,7 +12,7 @@ const ProductModerationPage: React.FC = () => {
     const fetchProducts = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getProducts();
+            const result = await backendApiService.getProducts();
             setProducts(result.filter(p => p.status === 'Pending Moderation'));
         } catch (error) {
             console.error("Failed to fetch products for moderation", error);
@@ -32,7 +33,7 @@ const ProductModerationPage: React.FC = () => {
         setModeratingProduct(null);
 
         try {
-            await adminApiService.updateProductStatus(updatedProduct);
+            await backendApiService.updateProduct(product.id, { status: newStatus, rejectionReason });
         } catch (error) {
             console.error("Failed to update product status:", error);
             alert("Ошибка сохранения статуса. Данные будут возвращены к исходному состоянию.");

@@ -32,7 +32,7 @@ const UsersPage: React.FC = () => {
         }
         return users.filter(user =>
             user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchQuery.toLowerCase())
+            (user.email && user.email.toLowerCase().includes(searchQuery.toLowerCase()))
         );
     }, [users, searchQuery]);
     

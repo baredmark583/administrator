@@ -5,6 +5,7 @@ export interface User {
   id: string;
   telegramId?: number;
   name: string;
+  email?: string;
   avatarUrl: string;
   headerImageUrl?: string;
   rating: number;
@@ -76,4 +77,7 @@ export interface Product {
   authenticationReportUrl?: string;
   nftTokenId?: string;
   nftContractAddress?: string;
+  status: 'Pending Moderation' | 'Active' | 'Rejected';
+  rejectionReason?: string;
+  createdAt: string;
 }

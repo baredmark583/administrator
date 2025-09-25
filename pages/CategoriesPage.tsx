@@ -25,7 +25,7 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ field, onUpdate, onRemove }) 
             <input 
                 type="text" 
                 value={field.label} 
-                onChange={e => onUpdate(field.id, { label: e.target.value })}
+                onChange={e => onUpdate(field.id, { label: e.target.value, name: e.target.value.toLowerCase().replace(/\s+/g, '_') })}
                 placeholder="Название поля (напр., Цвет)"
                 className="col-span-1 bg-base-100 border border-base-300 rounded p-2 text-sm"
             />
@@ -71,7 +71,7 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave
     const [icons, setIcons] = useState<AdminIcon[]>([]);
 
     useEffect(() => {
-        adminApiService.getIcons().then(setIcons);
+        backendApiService.getIcons().then(setIcons);
     }, []);
 
     const handleFieldUpdate = (fieldId: string, updates: Partial<CategoryField>) => {
@@ -169,7 +169,7 @@ const CategoriesPage: React.FC = () => {
         try {
             const [catResult, iconResult] = await Promise.all([
                 backendApiService.getCategories(),
-                adminApiService.getIcons() // Icons are UI-specific, mock is fine
+                backendApiService.getIcons()
             ]);
             setCategories(catResult);
             setIcons(iconResult);
@@ -195,7 +195,12 @@ const CategoriesPage: React.FC = () => {
     };
 
     const handleSave = async (categoryToSave: CategorySchema) => {
-        await backendApiService.updateCategory(categoryToSave);
+        const isNew = categoryToSave.id.startsWith('new_cat_');
+        if (isNew) {
+            await backendApiService.createCategory(categoryToSave);
+        } else {
+            await backendApiService.updateCategory(categoryToSave.id, categoryToSave);
+        }
         fetchData();
     };
 
