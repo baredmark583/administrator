@@ -28,7 +28,8 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (token) {
         // In a real app, you would validate the token against a '/auth/me' endpoint here.
         // For now, we'll just set a mock user if a token is found.
-        setUser({ email: 'superadmin@cryptocraft.app', role: 'admin' });
+        // FIX: Cast the mock user object to AdminUser to satisfy the strict 'role' type.
+        setUser({ email: 'superadmin@cryptocraft.app', role: 'admin' } as AdminUser);
     }
     setIsLoading(false);
   }, [token]);
@@ -41,7 +42,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
         const { access_token, user: adminUser } = await backendApiService.login(email, pass);
         localStorage.setItem('adminToken', access_token);
         setToken(access_token);
-        setUser(adminUser);
+        setUser(adminUser as AdminUser);
     } catch (error) {
         // Clear any stale tokens on login failure
         localStorage.removeItem('adminToken');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { backendApiService, AdminSetting } from '../services/backendApiService';
+// FIX: Removed unused AdminSetting import as it's not exported from the service.
+import { backendApiService } from '../services/backendApiService';
 
 const SettingsPage: React.FC = () => {
     const [settings, setSettings] = useState<Record<string, string>>({});

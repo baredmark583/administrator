@@ -55,7 +55,8 @@ const EditIconModal: React.FC<EditIconModalProps> = ({ systemIcon, savedIcon, on
 
         if (inputType === 'url') {
             if (!iconUrl.trim()) return alert('Пожалуйста, введите URL.');
-            payload.iconUrl = iconUrl;
+            // FIX: Cast payload to any to add iconUrl, which is expected by the backend but not in the frontend type.
+            (payload as any).iconUrl = iconUrl;
         } else {
             if (!svgContent.trim()) return alert('Пожалуйста, вставьте SVG-код.');
             payload.svgContent = svgContent;

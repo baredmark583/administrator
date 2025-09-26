@@ -2,6 +2,8 @@
 // required for the admin panel's backend API service.
 
 export interface CategoryField {
+  // FIX: Added optional id to match backend entity and support client-side operations.
+  id?: string;
   name: string; // Used as id
   label: string; // Displayed label
   type: 'text' | 'number' | 'select';
@@ -10,8 +12,13 @@ export interface CategoryField {
 }
 
 export interface CategorySchema {
+  // FIX: Added optional id and iconId to match backend entity and support client-side operations.
+  id?: string;
+  iconUrl?: string | null;
   name: string;
   fields: CategoryField[];
+  parentId?: string | null;
+  subcategories?: CategorySchema[];
 }
 
 export const CATEGORIES: CategorySchema[] = [

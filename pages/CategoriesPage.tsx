@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { adminApiService, CategorySchema, CategoryField, AdminIcon } from '../services/adminApiService';
+// FIX: Corrected import to pull backendApiService from the correct file.
 import { backendApiService } from '../services/backendApiService';
+import { AdminIcon } from '../services/adminApiService';
+// FIX: Import CategorySchema and CategoryField from constants where they are exported.
+import { CategorySchema, CategoryField } from '../constants';
 
 // --- Components ---
 
@@ -11,7 +14,7 @@ interface FieldEditorProps {
 }
 
 const FieldEditor: React.FC<FieldEditorProps> = ({ field, onUpdate, onRemove }) => {
-    const [options, setOptions] = useState(field.options.join(', '));
+    const [options, setOptions] = useState((field.options || []).join(', '));
 
     useEffect(() => {
         const handler = setTimeout(() => {
@@ -63,17 +66,13 @@ interface CategoryModalProps {
     category: CategorySchema;
     onClose: () => void;
     onSave: (category: CategorySchema) => Promise<void>;
+    parentName?: string;
 }
 
-const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave }) => {
+const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave, parentName }) => {
     const [editedCategory, setEditedCategory] = useState<CategorySchema>(category);
     const [isSaving, setIsSaving] = useState(false);
-    const [icons, setIcons] = useState<AdminIcon[]>([]);
-
-    useEffect(() => {
-        backendApiService.getIcons().then(setIcons);
-    }, []);
-
+    
     const handleFieldUpdate = (fieldId: string, updates: Partial<CategoryField>) => {
         setEditedCategory(prev => ({
             ...prev,
@@ -104,13 +103,13 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave
         onClose();
     };
     
-    const selectedIconSvg = icons.find(i => i.id === editedCategory.iconId)?.svgContent;
+    const modalTitle = parentName ? `Редактор подкатегории для "${parentName}"` : "Редактор категории";
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
             <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
                 <div className="p-4 border-b border-base-300">
-                    <h2 className="text-xl font-bold">Редактор категории</h2>
+                    <h2 className="text-xl font-bold">{modalTitle}</h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <input 
                             type="text" 
@@ -119,17 +118,14 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave
                             className="w-full bg-base-200 border border-base-300 rounded p-2"
                         />
                          <div className="flex items-center gap-2">
-                            {selectedIconSvg && <div className="w-8 h-8 text-primary flex-shrink-0" dangerouslySetInnerHTML={{ __html: selectedIconSvg }} />}
-                            <select 
-                                value={editedCategory.iconId || ''} 
-                                onChange={e => setEditedCategory(prev => ({ ...prev, iconId: e.target.value || null }))}
+                            {editedCategory.iconUrl && <img src={editedCategory.iconUrl} alt="Preview" className="w-8 h-8 rounded" />}
+                            <input 
+                                type="text" 
+                                placeholder="URL иконки"
+                                value={editedCategory.iconUrl || ''} 
+                                onChange={e => setEditedCategory(prev => ({ ...prev, iconUrl: e.target.value || null }))}
                                 className="w-full bg-base-200 border border-base-300 rounded p-2"
-                            >
-                                <option value="">- Выбрать иконку -</option>
-                                {icons.map(icon => (
-                                    <option key={icon.id} value={icon.id}>{icon.name}</option>
-                                ))}
-                            </select>
+                            />
                          </div>
                      </div>
                 </div>
@@ -152,11 +148,55 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onSave
 };
 
 
+interface CategoryTreeItemProps {
+    category: CategorySchema;
+    level: number;
+    getIconForCategory: (iconUrl: string | null) => JSX.Element | null;
+    onEdit: (category: CategorySchema) => void;
+    onCreateSubcategory: (parentId: string) => void;
+}
+
+const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({ category, level, getIconForCategory, onEdit, onCreateSubcategory }) => {
+    return (
+        <div style={{ marginLeft: `${level * 20}px` }}>
+            <div className="bg-base-200 p-3 rounded-md">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        {getIconForCategory(category.iconUrl)}
+                        <h3 className="font-bold text-white">{category.name}</h3>
+                        <span className="text-xs text-base-content/70">({category.fields.length} полей)</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        {level < 3 && ( // Allow creating subcategories up to level 4
+                             <button onClick={() => onCreateSubcategory(category.id)} className="text-sm text-primary hover:underline">+ Добавить подкатегорию</button>
+                        )}
+                        <button onClick={() => onEdit(category)} className="text-sm text-sky-400 hover:underline">Редактировать</button>
+                    </div>
+                </div>
+            </div>
+             {category.subcategories && category.subcategories.length > 0 && (
+               <div className="mt-2 space-y-2">
+                   {category.subcategories.map(sub => (
+                       <CategoryTreeItem 
+                           key={sub.id} 
+                           category={sub} 
+                           level={level + 1} 
+                           getIconForCategory={getIconForCategory} 
+                           onEdit={onEdit} 
+                           onCreateSubcategory={onCreateSubcategory} 
+                       />
+                   ))}
+               </div>
+           )}
+        </div>
+    );
+};
+
+
 // --- Page ---
 
 const CategoriesPage: React.FC = () => {
     const [categories, setCategories] = useState<CategorySchema[]>([]);
-    const [icons, setIcons] = useState<AdminIcon[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingCategory, setEditingCategory] = useState<CategorySchema | null>(null);
 
@@ -167,12 +207,8 @@ const CategoriesPage: React.FC = () => {
     const fetchData = async () => {
         setIsLoading(true);
         try {
-            const [catResult, iconResult] = await Promise.all([
-                backendApiService.getCategories(),
-                backendApiService.getIcons()
-            ]);
+            const catResult = await backendApiService.getCategories();
             setCategories(catResult);
-            setIcons(iconResult);
         } catch (error) {
             console.error("Failed to fetch page data", error);
         } finally {
@@ -184,18 +220,31 @@ const CategoriesPage: React.FC = () => {
         setEditingCategory(JSON.parse(JSON.stringify(category))); // Deep copy to avoid direct mutation
     };
     
-    const handleCreate = () => {
+    const handleCreateParent = () => {
         const newCategory: CategorySchema = {
             id: `new_cat_${Date.now()}`,
             name: 'Новая категория',
-            iconId: null,
+            iconUrl: null,
             fields: [],
+            parentId: null,
         };
         setEditingCategory(newCategory);
     };
 
+    const handleCreateSubcategory = (parentId: string) => {
+        const newSubcategory: CategorySchema = {
+            id: `new_subcat_${Date.now()}`,
+            name: 'Новая подкатегория',
+            iconUrl: null,
+            fields: [],
+            parentId: parentId,
+        };
+        setEditingCategory(newSubcategory);
+    };
+
+
     const handleSave = async (categoryToSave: CategorySchema) => {
-        const isNew = categoryToSave.id.startsWith('new_cat_');
+        const isNew = categoryToSave.id.startsWith('new_');
         if (isNew) {
             await backendApiService.createCategory(categoryToSave);
         } else {
@@ -204,10 +253,9 @@ const CategoriesPage: React.FC = () => {
         fetchData();
     };
 
-    const getIconForCategory = (categoryId: string | null) => {
-        if (!categoryId) return null;
-        const icon = icons.find(i => i.id === categoryId);
-        return icon ? <div className="w-6 h-6 text-primary" dangerouslySetInnerHTML={{ __html: icon.svgContent }} /> : null;
+    const getIconForCategory = (iconUrl: string | null) => {
+        if (!iconUrl) return null;
+        return <img src={iconUrl} alt="icon" className="w-6 h-6 rounded object-contain flex-shrink-0" />;
     }
 
     if (isLoading) {
@@ -218,24 +266,22 @@ const CategoriesPage: React.FC = () => {
         <div>
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">Управление Категориями</h1>
-                <button onClick={handleCreate} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
-                    + Создать категорию
+                <button onClick={handleCreateParent} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
+                    + Создать родительскую категорию
                 </button>
             </div>
             
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-4">
                     {categories.map(cat => (
-                        <div key={cat.id} className="bg-base-200 p-4 rounded-md">
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    {getIconForCategory(cat.iconId)}
-                                    <h3 className="font-bold text-lg">{cat.name}</h3>
-                                </div>
-                                <button onClick={() => handleEdit(cat)} className="text-sm text-sky-400 hover:underline">Редактировать</button>
-                            </div>
-                            <p className="text-xs text-base-content/70">{cat.fields.length} полей</p>
-                        </div>
+                        <CategoryTreeItem 
+                           key={cat.id} 
+                           category={cat} 
+                           level={0}
+                           getIconForCategory={getIconForCategory}
+                           onEdit={handleEdit}
+                           onCreateSubcategory={handleCreateSubcategory}
+                       />
                     ))}
                 </div>
             </div>
@@ -245,6 +291,7 @@ const CategoriesPage: React.FC = () => {
                     category={editingCategory}
                     onClose={() => setEditingCategory(null)}
                     onSave={handleSave}
+                    parentName={editingCategory.parentId ? categories.find(c => c.id === editingCategory.parentId)?.name : undefined}
                 />
             )}
         </div>
