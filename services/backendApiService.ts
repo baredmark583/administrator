@@ -182,6 +182,20 @@ export const backendApiService = {
             body: JSON.stringify(category),
         });
     },
+    
+    batchCreateCategories: async(categories: CategorySchema[]): Promise<void> => {
+        return apiFetch('/categories/batch-create', {
+            method: 'POST',
+            body: JSON.stringify({ categories }),
+        });
+    },
+    
+    generateCategoryStructure: async (description: string): Promise<CategorySchema[]> => {
+        return apiFetch('/ai/generate-category-structure', {
+            method: 'POST',
+            body: JSON.stringify({ description }),
+        });
+    },
 
     getIcons: async(): Promise<AdminIcon[]> => {
         return apiFetch('/icons');

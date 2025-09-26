@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// FIX: Corrected import to pull backendApiService from the correct file.
 import { backendApiService } from '../services/backendApiService';
-import { AdminIcon } from '../services/adminApiService';
-// FIX: Import CategorySchema and CategoryField from constants where they are exported.
 import { CategorySchema, CategoryField } from '../constants';
 
 // --- Components ---
@@ -192,6 +189,97 @@ const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({ category, level, ge
     );
 };
 
+const CategoryPreview: React.FC<{ category: CategorySchema; level: number }> = ({ category, level }) => (
+    <div style={{ paddingLeft: `${level * 20}px` }} className="py-1">
+        <p className="text-white">{category.name}</p>
+        {category.subcategories && category.subcategories.length > 0 && (
+            <div className="border-l border-base-300">
+                {category.subcategories.map(sub => <CategoryPreview key={sub.name} category={sub} level={level + 1} />)}
+            </div>
+        )}
+    </div>
+);
+
+
+interface AiGenerationModalProps {
+    onClose: () => void;
+    onSave: (structure: CategorySchema[]) => Promise<void>;
+}
+
+const AiGenerationModal: React.FC<AiGenerationModalProps> = ({ onClose, onSave }) => {
+    const [prompt, setPrompt] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [generatedStructure, setGeneratedStructure] = useState<CategorySchema[] | null>(null);
+
+    const handleGenerate = async () => {
+        if (!prompt.trim()) {
+            setError('Пожалуйста, опишите ваш маркетплейс.');
+            return;
+        }
+        setIsLoading(true);
+        setError('');
+        setGeneratedStructure(null);
+        try {
+            const result = await backendApiService.generateCategoryStructure(prompt);
+            setGeneratedStructure(result);
+        } catch (err) {
+            setError((err as Error).message || 'Не удалось сгенерировать структуру.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const handleSave = async () => {
+        if (!generatedStructure) return;
+        setIsLoading(true);
+        await onSave(generatedStructure);
+        setIsLoading(false);
+        onClose();
+    }
+
+    return (
+         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+            <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                <div className="p-4 border-b border-base-300">
+                    <h2 className="text-xl font-bold text-white">AI-генератор структуры категорий</h2>
+                </div>
+                <div className="p-6 space-y-4 overflow-y-auto">
+                    <div>
+                        <label className="block text-sm font-medium text-base-content/70 mb-1">Опишите ваш маркетплейс</label>
+                        <textarea
+                            value={prompt}
+                            onChange={e => setPrompt(e.target.value)}
+                            rows={3}
+                            className="w-full bg-base-200 border border-base-300 rounded-md p-2"
+                            placeholder="Например: 'Маркетплейс для продажи винтажной одежды, антикварной мебели и редких коллекционных монет.'"
+                            disabled={isLoading}
+                        />
+                    </div>
+                    <button onClick={handleGenerate} disabled={isLoading || !prompt.trim()} className="w-full bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg flex justify-center items-center disabled:bg-gray-500">
+                        {isLoading ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : 'Сгенерировать'}
+                    </button>
+                    {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+
+                    {generatedStructure && (
+                        <div className="mt-4 border-t border-base-300 pt-4">
+                            <h3 className="font-semibold text-white mb-2">Предложенная структура:</h3>
+                            <div className="bg-base-200 p-3 rounded-md max-h-60 overflow-y-auto">
+                                {generatedStructure.map(cat => <CategoryPreview key={cat.name} category={cat} level={0} />)}
+                            </div>
+                        </div>
+                    )}
+                </div>
+                <div className="p-4 mt-auto border-t border-base-300 flex justify-end gap-3">
+                    <button onClick={onClose} disabled={isLoading} className="bg-base-300 hover:bg-base-200 text-white font-bold py-2 px-4 rounded">Отмена</button>
+                    <button onClick={handleSave} disabled={isLoading || !generatedStructure} className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded disabled:bg-gray-500">
+                        {isLoading ? 'Сохранение...' : 'Сохранить структуру'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- Page ---
 
@@ -199,6 +287,7 @@ const CategoriesPage: React.FC = () => {
     const [categories, setCategories] = useState<CategorySchema[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingCategory, setEditingCategory] = useState<CategorySchema | null>(null);
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -252,6 +341,11 @@ const CategoriesPage: React.FC = () => {
         }
         fetchData();
     };
+    
+    const handleSaveAiStructure = async (structure: CategorySchema[]) => {
+        await backendApiService.batchCreateCategories(structure);
+        fetchData(); // Refresh the categories list
+    };
 
     const getIconForCategory = (iconUrl: string | null) => {
         if (!iconUrl) return null;
@@ -264,11 +358,16 @@ const CategoriesPage: React.FC = () => {
 
     return (
         <div>
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h1 className="text-3xl font-bold text-white">Управление Категориями</h1>
-                <button onClick={handleCreateParent} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
-                    + Создать родительскую категорию
-                </button>
+                <div className="flex gap-2">
+                    <button onClick={() => setIsAiModalOpen(true)} className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2">
+                        🤖 Сгенерировать с помощью AI
+                    </button>
+                    <button onClick={handleCreateParent} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
+                        + Создать категорию
+                    </button>
+                </div>
             </div>
             
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">
@@ -293,6 +392,10 @@ const CategoriesPage: React.FC = () => {
                     onSave={handleSave}
                     parentName={editingCategory.parentId ? categories.find(c => c.id === editingCategory.parentId)?.name : undefined}
                 />
+            )}
+            
+            {isAiModalOpen && (
+                <AiGenerationModal onClose={() => setIsAiModalOpen(false)} onSave={handleSaveAiStructure} />
             )}
         </div>
     );
