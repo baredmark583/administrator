@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { adminApiService, AdminPanelDispute } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
+import type { AdminPanelDispute } from '../services/adminApiService';
 import DisputesTable from '../components/DisputesTable';
 import DisputeDetailsModal from '../components/DisputeDetailsModal';
 
@@ -12,7 +13,7 @@ const DisputesPage: React.FC = () => {
     const fetchDisputes = async () => {
         setIsLoading(true);
         try {
-            const result = await adminApiService.getDisputes();
+            const result = await backendApiService.getDisputes();
             setDisputes(result);
         } catch (error) {
             console.error("Failed to fetch disputes", error);
@@ -40,27 +41,30 @@ const DisputesPage: React.FC = () => {
     };
 
     const handleResolveDispute = async (dispute: AdminPanelDispute, resolutionStatus: 'RESOLVED_BUYER' | 'RESOLVED_SELLER', adminMessage: string) => {
-        const updatedDispute = {
+        const updatedDispute: AdminPanelDispute = {
             ...dispute,
             status: resolutionStatus,
             messages: [
                 ...dispute.messages,
                 {
                     id: `msg-${Date.now()}`,
-                    senderId: 'arbitrator-01',
+                    senderId: 'arbitrator-01', // This should be the current admin's ID
                     senderName: 'CryptoCraft Support',
-                    senderAvatar: 'https://picsum.photos/seed/support/100/100',
+                    senderAvatar: 'https://picsum.photos/seed/support/100/100', // Admin avatar
                     timestamp: Date.now(),
-                    text: `СПОР РЕШЕН. ${adminMessage}`
+                    text: `РЕШЕНИЕ АРБИТРА: ${adminMessage}`
                 }
             ]
         };
 
+        // Optimistic update
         setDisputes(prev => prev.map(d => d.id === dispute.id ? updatedDispute : d));
         setViewingDispute(null);
 
         try {
-            await adminApiService.updateDispute(updatedDispute);
+            await backendApiService.updateDispute(updatedDispute);
+            // Optional: refetch for consistency, but optimistic update should suffice
+            fetchDisputes();
         } catch (error) {
             console.error("Failed to update dispute:", error);
             alert("Ошибка сохранения. Данные будут возвращены к исходному состоянию.");

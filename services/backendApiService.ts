@@ -1,10 +1,9 @@
-// This service handles all communication with the real NestJS backend for the admin panel.
-import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder, AdminIcon, AdminDashboardData } from './adminApiService';
-// Assuming the backend entities are similar enough to frontend types for this mapping
-import type { User, Product } from '../../types'; 
+// This service handles REAL API calls to the NestJS backend for the admin panel.
 
-// --- REAL API IMPLEMENTATION ---
-const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001';
+import type { AdminDashboardData, AdminPanelUser, AdminPanelProduct, AdminPanelOrder, AdminTransaction, AdminGlobalPromoCode, AdminPanelDispute, AdminIcon } from './adminApiService';
+import type { CategorySchema } from '../constants';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   try {
@@ -13,19 +12,26 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       'Content-Type': 'application/json',
       ...options.headers,
     };
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, { ...options, headers });
+
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ message: response.statusText }));
       throw new Error(errorData.message || 'An API error occurred');
     }
-    const contentType = response.headers.get("content-type");
-    if (contentType && contentType.indexOf("application/json") !== -1) {
-        return response.json();
+    
+    if (response.status === 204) { // No Content
+        return;
     }
-    return;
+
+    return response.json();
   } catch (error) {
     console.error(`API fetch error: ${options.method || 'GET'} ${endpoint}`, error);
     throw error;
@@ -33,159 +39,169 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 };
 
 
-// --- DATA MAPPERS ---
-const mapUserToAdminPanelUser = (user: User): AdminPanelUser => ({
-    id: user.id,
-    name: user.name,
-    email: user.email || `tg_id_${user.telegramId}`,
-    avatarUrl: user.avatarUrl,
-    registrationDate: new Date().toISOString().split('T')[0], // Mock date
-    status: user.verificationLevel === 'PRO' ? 'Pro' : 'Standard',
-    balance: user.balance,
-    isBlocked: false, // Backend entity doesn't have this, default to false
-});
-
-const mapProductToAdminPanelProduct = (product: Product): AdminPanelProduct => ({
-    id: product.id,
-    title: product.title,
-    sellerName: product.seller.name,
-    sellerId: product.seller.id,
-    imageUrls: product.imageUrls,
-    description: product.description,
-    dynamicAttributes: product.dynamicAttributes,
-    category: product.category,
-    price: product.price ?? 0,
-    status: product.status || 'Pending Moderation',
-    dateAdded: new Date(product.createdAt || Date.now()).toISOString().split('T')[0],
-    rejectionReason: product.rejectionReason,
-});
-
-// A temporary type to represent the shape of the order data coming from the backend.
-type BackendOrder = any;
-
-const mapOrderToAdminPanelOrder = (order: BackendOrder): AdminPanelOrder => ({
-  id: order.id,
-  customerName: order.buyer.name,
-  sellerName: order.seller.name,
-  date: new Date(order.createdAt).toISOString().split('T')[0],
-  total: order.total,
-  status: order.status,
-  items: order.items.map(item => ({
-    productId: item.product.id,
-    title: item.product.title,
-    imageUrl: item.product.imageUrls[0],
-    quantity: item.quantity,
-    price: item.price,
-  })),
-  customerInfo: {
-    name: order.buyer.name,
-    email: order.buyer.email || `tg_id_${order.buyer.telegramId}`,
-    shippingAddress: `${order.shippingAddress.city}, ${order.shippingAddress.postOffice}`,
-  },
-});
-
-export interface AdminSetting {
-    key: string;
-    value: string;
-}
-
 export const backendApiService = {
-  // FIX: Added missing login method.
-  login: async (email, password) => {
-    return apiFetch('/auth/admin/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-  },
-  
-  // Dashboard
-  getDashboardData: async (): Promise<AdminDashboardData> => {
-    return apiFetch('/dashboard');
-  },
+    login: async (email: string, password: string): Promise<{ access_token: string; user: { email: string, role: string } }> => {
+        return apiFetch('/auth/admin/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password }),
+        });
+    },
 
-  // Users
-  getUsers: async (): Promise<AdminPanelUser[]> => {
-    const users: User[] = await apiFetch('/users');
-    return users.map(mapUserToAdminPanelUser);
-  },
-  updateUser: async (user: AdminPanelUser): Promise<AdminPanelUser> => {
-     const updates: Partial<User> = {
-         name: user.name,
-         email: user.email,
-         balance: user.balance,
-         verificationLevel: user.status === 'Pro' ? 'PRO' : 'NONE',
-     };
-     await apiFetch(`/users/${user.id}`, {
-         method: 'PATCH',
-         body: JSON.stringify(updates),
-     });
-     return user;
-  },
-  
-  // Products
-  getProducts: async (): Promise<AdminPanelProduct[]> => {
-    const products: Product[] = await apiFetch('/products');
-    return products.map(mapProductToAdminPanelProduct);
-  },
-  updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> => {
-      return apiFetch(`/products/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(updates),
-      });
-  },
-  
-  // FIX: Added missing getOrders method.
-  getOrders: async (): Promise<AdminPanelOrder[]> => {
-    const orders: BackendOrder[] = await apiFetch('/orders');
-    return orders.map(mapOrderToAdminPanelOrder);
-  },
-  
-  // FIX: Added missing updateOrder method.
-  updateOrder: async (order: AdminPanelOrder): Promise<AdminPanelOrder> => {
-    const updates = { status: order.status };
-    const updatedOrder: BackendOrder = await apiFetch(`/orders/${order.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(updates),
-    });
-    return mapOrderToAdminPanelOrder(updatedOrder);
-  },
+    getDashboardData: async (): Promise<AdminDashboardData> => {
+        return apiFetch('/dashboard');
+    },
 
-  // Categories
-  getCategories: async (): Promise<CategorySchema[]> => {
-    return apiFetch('/categories');
-  },
-  createCategory: async (category: Omit<CategorySchema, 'id'>): Promise<CategorySchema> => {
-      return apiFetch('/categories', {
-          method: 'POST',
-          body: JSON.stringify(category),
-      });
-  },
-  updateCategory: async (id: string, category: CategorySchema): Promise<CategorySchema> => {
-      return apiFetch(`/categories/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify(category),
-      });
-  },
-   
-   // Icons
-   getIcons: async (): Promise<AdminIcon[]> => {
-       return apiFetch('/icons');
-   },
-   upsertIcon: async (icon: Partial<Omit<AdminIcon, 'id'>>): Promise<AdminIcon> => {
-       return apiFetch('/icons/upsert', {
-           method: 'PATCH',
-           body: JSON.stringify(icon),
-       });
-   },
+    getUsers: async (): Promise<AdminPanelUser[]> => {
+        const users = await apiFetch('/users');
+        // Map backend User to AdminPanelUser
+        return users.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            email: u.email || 'N/A',
+            avatarUrl: u.avatarUrl,
+            registrationDate: new Date(u.createdAt).toLocaleDateString(),
+            status: u.verificationLevel === 'PRO' ? 'Pro' : 'Standard',
+            balance: u.balance,
+            isBlocked: false, // This is a UI-only feature for now
+        }));
+    },
+    
+    updateUser: async (user: AdminPanelUser): Promise<AdminPanelUser> => {
+        const payload = {
+            name: user.name,
+            email: user.email,
+            balance: user.balance,
+            verificationLevel: user.status === 'Pro' ? 'PRO' : 'NONE',
+        };
+        return apiFetch(`/users/${user.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+        });
+    },
+    
+    getProducts: async (): Promise<AdminPanelProduct[]> => {
+        const products = await apiFetch('/products');
+        return products.map((p: any) => ({
+            id: p.id,
+            title: p.title,
+            imageUrls: p.imageUrls,
+            sellerName: p.seller?.name || 'Unknown',
+            category: p.category,
+            price: p.price,
+            status: p.status,
+            dateAdded: new Date(p.createdAt).toLocaleDateString(),
+            description: p.description,
+            dynamicAttributes: p.dynamicAttributes,
+            rejectionReason: p.rejectionReason,
+        }));
+    },
+    
+    updateProduct: async (productId: string, updates: Partial<AdminPanelProduct>): Promise<AdminPanelProduct> => {
+        return apiFetch(`/products/${productId}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updates),
+        });
+    },
 
-   // Settings
-   getSettings: async (): Promise<AdminSetting[]> => {
-       return apiFetch('/settings');
-   },
-   updateSettings: async (settings: { key: string; value: string }[]): Promise<AdminSetting[]> => {
-       return apiFetch('/settings', {
-           method: 'PATCH',
-           body: JSON.stringify(settings),
-       });
-   },
+    getOrders: async (): Promise<AdminPanelOrder[]> => {
+        const orders = await apiFetch('/orders');
+        return orders.map((o: any) => ({
+            id: o.id,
+            customerName: o.buyer.name,
+            date: new Date(o.orderDate).toLocaleDateString(),
+            total: o.total,
+            status: o.status,
+            customerInfo: {
+                name: o.buyer.name,
+                email: o.buyer.email || 'N/A',
+                shippingAddress: `${o.shippingAddress.city}, ${o.shippingAddress.postOffice}`
+            },
+            sellerName: o.seller.name,
+            items: o.items.map((item: any) => ({
+                productId: item.product.id,
+                title: item.product.title,
+                imageUrl: item.product.imageUrls[0],
+                quantity: item.quantity,
+                price: item.price,
+            }))
+        }));
+    },
+    
+    updateOrder: async (order: AdminPanelOrder): Promise<AdminPanelOrder> => {
+        return apiFetch(`/orders/${order.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: order.status }),
+        });
+    },
+
+    getDisputes: async (): Promise<AdminPanelDispute[]> => {
+        return apiFetch('/disputes');
+    },
+
+    updateDispute: async (dispute: AdminPanelDispute): Promise<AdminPanelDispute> => {
+        return apiFetch(`/disputes/${dispute.id}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: dispute.status, messages: dispute.messages }),
+        });
+    },
+
+    getTransactions: async (): Promise<AdminTransaction[]> => {
+        return apiFetch('/transactions');
+    },
+    
+    getGlobalPromoCodes: async (): Promise<AdminGlobalPromoCode[]> => {
+        // This would be a real endpoint in a full implementation
+        return Promise.resolve([]);
+    },
+
+    createGlobalPromoCode: async (data: any): Promise<AdminGlobalPromoCode> => {
+        console.log("Creating global promo code (mock):", data);
+        await new Promise(res => setTimeout(res, 500));
+        return { ...data, id: `promo_${Date.now()}`, uses: 0 };
+    },
+
+    deleteGlobalPromoCode: async (id: string): Promise<void> => {
+        console.log("Deleting global promo code (mock):", id);
+        await new Promise(res => setTimeout(res, 300));
+    },
+
+    getCategories: async(): Promise<CategorySchema[]> => {
+        return apiFetch('/categories');
+    },
+
+    createCategory: async(category: CategorySchema): Promise<CategorySchema> => {
+        return apiFetch('/categories', {
+            method: 'POST',
+            body: JSON.stringify(category),
+        });
+    },
+
+    updateCategory: async(id: string, category: CategorySchema): Promise<CategorySchema> => {
+        return apiFetch(`/categories/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(category),
+        });
+    },
+
+    getIcons: async(): Promise<AdminIcon[]> => {
+        return apiFetch('/icons');
+    },
+    
+    upsertIcon: async(iconData: Partial<Omit<AdminIcon, 'id'>>): Promise<AdminIcon> => {
+        return apiFetch('/icons/upsert', {
+            method: 'PATCH',
+            body: JSON.stringify(iconData),
+        });
+    },
+
+    getSettings: async(): Promise<{key: string, value: string}[]> => {
+        return apiFetch('/settings');
+    },
+
+    updateSettings: async(settings: {key: string, value: string}[]): Promise<void> => {
+        return apiFetch('/settings', {
+            method: 'PATCH',
+            body: JSON.stringify(settings),
+        });
+    },
 };
