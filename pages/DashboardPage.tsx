@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import StatCard from '../components/StatCard';
 import SalesChart from '../components/SalesChart';
-import { adminApiService, AdminDashboardData } from '../services/adminApiService';
+import { backendApiService } from '../services/backendApiService';
+import type { AdminDashboardData } from '../services/adminApiService';
 
 const DashboardPage: React.FC = () => {
     const [data, setData] = useState<AdminDashboardData | null>(null);
@@ -11,7 +12,7 @@ const DashboardPage: React.FC = () => {
         const fetchData = async () => {
             setIsLoading(true);
             try {
-                const result = await adminApiService.getDashboardData();
+                const result = await backendApiService.getDashboardData();
                 setData(result);
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);

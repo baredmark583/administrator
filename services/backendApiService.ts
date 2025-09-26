@@ -1,5 +1,5 @@
 // This service handles all communication with the real NestJS backend for the admin panel.
-import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder, AdminIcon } from './adminApiService';
+import type { AdminPanelUser, AdminPanelProduct, CategorySchema, AdminPanelOrder, AdminIcon, AdminDashboardData } from './adminApiService';
 // Assuming the backend entities are similar enough to frontend types for this mapping
 import type { User, Product } from '../../types'; 
 
@@ -84,6 +84,10 @@ const mapOrderToAdminPanelOrder = (order: BackendOrder): AdminPanelOrder => ({
   },
 });
 
+export interface AdminSetting {
+    key: string;
+    value: string;
+}
 
 export const backendApiService = {
   // FIX: Added missing login method.
@@ -94,6 +98,11 @@ export const backendApiService = {
     });
   },
   
+  // Dashboard
+  getDashboardData: async (): Promise<AdminDashboardData> => {
+    return apiFetch('/dashboard');
+  },
+
   // Users
   getUsers: async (): Promise<AdminPanelUser[]> => {
     const users: User[] = await apiFetch('/users');
@@ -167,5 +176,16 @@ export const backendApiService = {
            method: 'PATCH',
            body: JSON.stringify(icon),
        });
-   }
+   },
+
+   // Settings
+   getSettings: async (): Promise<AdminSetting[]> => {
+       return apiFetch('/settings');
+   },
+   updateSettings: async (settings: { key: string; value: string }[]): Promise<AdminSetting[]> => {
+       return apiFetch('/settings', {
+           method: 'PATCH',
+           body: JSON.stringify(settings),
+       });
+   },
 };

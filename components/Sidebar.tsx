@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 
@@ -6,18 +6,30 @@ const NavItem: React.FC<{ to: string; icon: JSX.Element; label: string; subItems
     const location = useLocation();
     const isParentActive = location.pathname.startsWith(to) && to !== '/dashboard';
 
-    const baseClasses = "flex items-center pl-3 py-3 pr-4 rounded text-sm font-medium";
+    const [isSubmenuOpen, setIsSubmenuOpen] = useState(isParentActive);
+    
+    useEffect(() => {
+        setIsSubmenuOpen(isParentActive);
+    }, [isParentActive]);
+
+    const baseClasses = "flex items-center pl-3 py-3 pr-4 rounded text-sm font-medium w-full";
     const activeClasses = "bg-primary text-primary-content";
     const inactiveClasses = "text-base-content/80 hover:bg-base-300";
 
     if (subItems && subItems.length > 0) {
         return (
              <li>
-                <div className={`${baseClasses} ${isParentActive ? 'text-white' : inactiveClasses}`}>
+                <button
+                    onClick={() => setIsSubmenuOpen(!isSubmenuOpen)}
+                    className={`${baseClasses} ${isParentActive ? 'text-white' : inactiveClasses}`}
+                >
                     {icon}
-                    <span className="ml-3">{label}</span>
-                </div>
-                {isParentActive && (
+                    <span className="ml-3 flex-1 text-left">{label}</span>
+                    <svg className={`w-4 h-4 transform transition-transform ${isSubmenuOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                {isSubmenuOpen && (
                     <ul className="pl-8 pt-2 space-y-1">
                         {subItems.map(item => (
                              <li key={item.to}>
