@@ -3,7 +3,7 @@
 import type { AdminDashboardData, AdminPanelUser, AdminPanelProduct, AdminPanelOrder, AdminTransaction, AdminGlobalPromoCode, AdminPanelDispute, AdminIcon } from './adminApiService';
 import type { CategorySchema } from '../constants';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001';
 
 const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   try {
