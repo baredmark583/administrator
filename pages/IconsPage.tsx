@@ -13,9 +13,11 @@ interface EditIconModalProps {
 }
 
 const EditIconModal: React.FC<EditIconModalProps> = ({ systemIcon, savedIcon, onClose, onSave }) => {
-    const [inputType, setInputType] = useState<'svg' | 'url'>('url');
+    const [inputType, setInputType] = useState<'svg' | 'url'>(savedIcon?.svgContent ? 'svg' : 'url');
     const [svgContent, setSvgContent] = useState(savedIcon?.svgContent || '');
-    const [iconUrl, setIconUrl] = useState(systemIcon.suggestionUrl);
+    const [iconUrl, setIconUrl] = useState(savedIcon ? '' : systemIcon.suggestionUrl);
+    const [width, setWidth] = useState(savedIcon?.width || 24);
+    const [height, setHeight] = useState(savedIcon?.height || 24);
     const [previewContent, setPreviewContent] = useState(savedIcon?.svgContent || '');
     const [isSaving, setIsSaving] = useState(false);
 
@@ -51,7 +53,11 @@ const EditIconModal: React.FC<EditIconModalProps> = ({ systemIcon, savedIcon, on
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        const payload: Partial<Omit<AdminIcon, 'id'>> = { name: systemIcon.key };
+        const payload: Partial<Omit<AdminIcon, 'id'>> = { 
+            name: systemIcon.key,
+            width: Number(width),
+            height: Number(height)
+        };
 
         if (inputType === 'url') {
             if (!iconUrl.trim()) return alert('Пожалуйста, введите URL.');
@@ -98,12 +104,41 @@ const EditIconModal: React.FC<EditIconModalProps> = ({ systemIcon, savedIcon, on
                                 <textarea value={svgContent} onChange={e => setSvgContent(e.target.value)} rows={6} placeholder='<svg xmlns="http://www.w3.org/2000/svg" ...>' className="w-full bg-base-200 border border-base-300 rounded-md p-2 font-mono text-sm"/>
                             </div>
                         )}
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-base-content/70 mb-1">Ширина (px)</label>
+                                <input 
+                                    type="number" 
+                                    value={width} 
+                                    onChange={e => setWidth(Math.max(1, Math.min(512, parseInt(e.target.value) || 1)))} 
+                                    className="w-full bg-base-200 border border-base-300 rounded-md p-2"
+                                    min="1"
+                                    max="512"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-base-content/70 mb-1">Высота (px)</label>
+                                <input 
+                                    type="number" 
+                                    value={height} 
+                                    onChange={e => setHeight(Math.max(1, Math.min(512, parseInt(e.target.value) || 1)))} 
+                                    className="w-full bg-base-200 border border-base-300 rounded-md p-2"
+                                    min="1"
+                                    max="512"
+                                />
+                            </div>
+                        </div>
                         
                         <div>
                              <h4 className="text-sm font-medium text-base-content/70 mb-1">Предпросмотр</h4>
                              <div className="bg-base-200 p-4 rounded-md h-24 flex items-center justify-center">
                                 {previewContent.trim().startsWith('<svg') ? (
-                                     <div className="w-12 h-12 text-primary" dangerouslySetInnerHTML={{ __html: previewContent }} />
+                                     <div 
+                                        className="text-primary" 
+                                        style={{ width: `${width}px`, height: `${height}px` }}
+                                        dangerouslySetInnerHTML={{ __html: previewContent }} 
+                                    />
                                 ) : (
                                     <p className="text-xs text-base-content/70">{inputType === 'url' && iconUrl ? 'Загрузка...' : 'Нет данных для предпросмотра'}</p>
                                 )}
@@ -134,7 +169,7 @@ const IconSlotCard: React.FC<IconSlotCardProps> = ({ systemIcon, savedIcon, onEd
         <div className="flex-grow flex flex-col items-center justify-center gap-3 text-center">
              <div className="h-12 w-12 flex items-center justify-center">
                 {savedIcon ? (
-                     <div className="w-10 h-10 text-primary" dangerouslySetInnerHTML={{ __html: savedIcon.svgContent }} />
+                     <div className="text-primary" style={{width: `${savedIcon.width || 24}px`, height: `${savedIcon.height || 24}px`}} dangerouslySetInnerHTML={{ __html: savedIcon.svgContent }} />
                 ) : (
                     <div className="w-10 h-10 rounded-full bg-base-300/50 flex items-center justify-center text-base-content/50">?</div>
                 )}
@@ -142,6 +177,9 @@ const IconSlotCard: React.FC<IconSlotCardProps> = ({ systemIcon, savedIcon, onEd
             <div>
                 <p className="font-semibold text-white">{systemIcon.label}</p>
                 <p className="text-xs text-base-content/70 font-mono">ключ: {systemIcon.key}</p>
+                 <p className="text-xs text-base-content/70">
+                    {savedIcon?.width && savedIcon?.height ? `Размер: ${savedIcon.width}x${savedIcon.height}px` : 'Размер не задан'}
+                </p>
             </div>
         </div>
         <button onClick={onEdit} className="w-full mt-4 bg-base-300 hover:bg-primary/20 text-sm font-semibold py-2 rounded-md">
