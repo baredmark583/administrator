@@ -2,27 +2,24 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { adminApiService, AdminPanelUser } from '../services/adminApiService';
 import { backendApiService } from '../services/backendApiService';
 import UsersTable from '../components/UsersTable';
-import EditUserModal from '../components/EditUserModal';
 
 const UsersPage: React.FC = () => {
     const [users, setUsers] = useState<AdminPanelUser[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    const [editingUser, setEditingUser] = useState<AdminPanelUser | null>(null);
-
-    const fetchUsers = async () => {
-        setIsLoading(true);
-        try {
-            const result = await backendApiService.getUsers();
-            setUsers(result);
-        } catch (error) {
-            console.error("Failed to fetch users", error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
 
     useEffect(() => {
+        const fetchUsers = async () => {
+            setIsLoading(true);
+            try {
+                const result = await backendApiService.getUsers();
+                setUsers(result);
+            } catch (error) {
+                console.error("Failed to fetch users", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
         fetchUsers();
     }, []);
 
@@ -36,46 +33,6 @@ const UsersPage: React.FC = () => {
         );
     }, [users, searchQuery]);
     
-    const handleEditUser = (userId: string) => {
-        const userToEdit = users.find(u => u.id === userId);
-        if (userToEdit) {
-            setEditingUser(userToEdit);
-        }
-    };
-    
-    const handleSaveUser = async (updatedUser: AdminPanelUser) => {
-        // Optimistic UI update
-        setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
-        setEditingUser(null);
-        
-        try {
-            await backendApiService.updateUser(updatedUser);
-        } catch (error) {
-            console.error("Failed to update user:", error);
-            // Revert on error
-            alert("Ошибка сохранения. Данные будут возвращены к исходному состоянию.");
-            fetchUsers();
-        }
-    };
-
-    const handleBlockUser = async (userId: string) => {
-        const userToBlock = users.find(u => u.id === userId);
-        if (!userToBlock) return;
-        
-        const updatedUser = { ...userToBlock, isBlocked: !userToBlock.isBlocked };
-        
-        setUsers(prevUsers => prevUsers.map(u => u.id === userId ? updatedUser : u));
-        
-        try {
-            // Note: 'isBlocked' is a UI-only feature for now, backend doesn't support it yet.
-            // We call updateUser to save other potential changes.
-            await backendApiService.updateUser(updatedUser);
-        } catch (error) {
-            console.error("Failed to block/unblock user:", error);
-            alert("Ошибка. Данные будут возвращены к исходному состоянию.");
-            fetchUsers();
-        }
-    };
 
     return (
         <div>
@@ -101,20 +58,10 @@ const UsersPage: React.FC = () => {
                      <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>
                 ) : (
                     <UsersTable 
-                        users={filteredUsers} 
-                        onEdit={handleEditUser}
-                        onBlock={handleBlockUser}
+                        users={filteredUsers}
                     />
                 )}
             </div>
-            
-            {editingUser && (
-                <EditUserModal 
-                    user={editingUser}
-                    onClose={() => setEditingUser(null)}
-                    onSave={handleSaveUser}
-                />
-            )}
         </div>
     );
 };

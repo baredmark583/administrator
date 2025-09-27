@@ -1,6 +1,6 @@
 // This service handles REAL API calls to the NestJS backend for the admin panel.
 
-import type { AdminDashboardData, AdminPanelUser, AdminPanelProduct, AdminPanelOrder, AdminTransaction, AdminGlobalPromoCode, AdminPanelDispute, AdminIcon } from './adminApiService';
+import type { AdminDashboardData, AdminPanelUser, AdminPanelProduct, AdminPanelOrder, AdminTransaction, AdminGlobalPromoCode, AdminPanelDispute, AdminIcon, AdminPanelUserDetails } from './adminApiService';
 import type { CategorySchema } from '../constants';
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -66,6 +66,18 @@ export const backendApiService = {
         }));
     },
     
+    getUserDetails: async (id: string): Promise<AdminPanelUserDetails> => {
+        const user = await apiFetch(`/users/${id}/details`);
+        // Map backend data to AdminPanelUserDetails
+        return {
+            ...user,
+            registrationDate: new Date(user.createdAt).toLocaleDateString(),
+            status: user.verificationLevel === 'PRO' ? 'Pro' : 'Standard',
+            isBlocked: false, // UI-only feature
+            // You can add more detailed mapping for nested objects if needed
+        };
+    },
+
     updateUser: async (user: AdminPanelUser): Promise<AdminPanelUser> => {
         const payload = {
             name: user.name,

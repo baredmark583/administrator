@@ -46,6 +46,19 @@ export interface AdminPanelUser {
     isBlocked: boolean;
 }
 
+export interface AdminPanelUserDetails extends AdminPanelUser {
+    products: AdminPanelProduct[];
+    sales: any[]; // Using any to avoid circular dependency issues with AdminPanelOrder
+    purchases: any[];
+    disputes: AdminPanelDispute[];
+    financials: {
+        gmv: number;
+        totalSpent: number;
+        platformCommission: number;
+    };
+}
+
+
 export interface AdminPanelProduct {
     id: string;
     title: string;
@@ -79,6 +92,8 @@ export interface AdminPanelOrder {
         quantity: number;
         price: number;
     }[];
+    buyer: any;
+    seller: any;
 }
 
 export interface AdminLog {
@@ -153,9 +168,9 @@ let mockProducts: AdminPanelProduct[] = [
 ];
 
 let mockOrders: AdminPanelOrder[] = [
-    { id: 'order-1', customerName: 'Craft Enthusiast', date: '2023-05-11', total: 35.00, status: 'SHIPPED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Pottery Master', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 1, price: 35.00 }] },
-    { id: 'order-2', customerName: 'Craft Enthusiast', date: '2023-05-10', total: 99.00, status: 'DELIVERED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Jewelry Queen', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 1, price: 99.00 }] },
-    { id: 'order-3', customerName: 'Pottery Master', date: '2023-05-09', total: 950.00, status: 'PAID', customerInfo: { name: 'Pottery Master', email: 'pottery@example.com', shippingAddress: 'Lviv, NP 5' }, sellerName: 'Car Dealer Pro', items: [{ productId: 'prod-5', title: 'iPhone 14 Pro Max', imageUrl: 'https://picsum.photos/seed/prod5/100/100', quantity: 1, price: 950.00 }] },
+    { id: 'order-1', customerName: 'Craft Enthusiast', date: '2023-05-11', total: 35.00, status: 'SHIPPED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Pottery Master', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 1, price: 35.00 }], buyer: {}, seller: {} },
+    { id: 'order-2', customerName: 'Craft Enthusiast', date: '2023-05-10', total: 99.00, status: 'DELIVERED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Jewelry Queen', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 1, price: 99.00 }], buyer: {}, seller: {} },
+    { id: 'order-3', customerName: 'Pottery Master', date: '2023-05-09', total: 950.00, status: 'PAID', customerInfo: { name: 'Pottery Master', email: 'pottery@example.com', shippingAddress: 'Lviv, NP 5' }, sellerName: 'Car Dealer Pro', items: [{ productId: 'prod-5', title: 'iPhone 14 Pro Max', imageUrl: 'https://picsum.photos/seed/prod5/100/100', quantity: 1, price: 950.00 }], buyer: {}, seller: {} },
 ];
 
 let mockDisputes: AdminPanelDispute[] = [

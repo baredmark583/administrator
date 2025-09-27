@@ -1,13 +1,18 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { AdminPanelUser } from '../services/adminApiService';
 
 interface UsersTableProps {
     users: AdminPanelUser[];
-    onEdit: (userId: string) => void;
-    onBlock: (userId: string) => void;
 }
 
-const UsersTable: React.FC<UsersTableProps> = ({ users, onEdit, onBlock }) => {
+const UsersTable: React.FC<UsersTableProps> = ({ users }) => {
+    const navigate = useNavigate();
+
+    const handleRowClick = (userId: string) => {
+        navigate(`/users/${userId}`);
+    };
+
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-base-content">
@@ -17,12 +22,16 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onEdit, onBlock }) => {
                         <th scope="col" className="px-6 py-3">Дата регистрации</th>
                         <th scope="col" className="px-6 py-3">Статус</th>
                         <th scope="col" className="px-6 py-3">Баланс</th>
-                        <th scope="col" className="px-6 py-3 text-right">Действия</th>
+                        <th scope="col" className="px-6 py-3"> </th>
                     </tr>
                 </thead>
                 <tbody>
                     {users.map((user) => (
-                        <tr key={user.id} className={`border-b border-base-300 ${user.isBlocked ? 'bg-red-900/40 hover:bg-red-900/60' : 'bg-base-100 hover:bg-base-300/50'}`}>
+                        <tr 
+                            key={user.id} 
+                            onClick={() => handleRowClick(user.id)}
+                            className={`cursor-pointer border-b border-base-300 ${user.isBlocked ? 'bg-red-900/40 hover:bg-red-900/60' : 'bg-base-100 hover:bg-base-300/50'}`}
+                        >
                             <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
                                 <div className="flex items-center gap-3">
                                     <img className="w-10 h-10 rounded-full" src={user.avatarUrl} alt={user.name} />
@@ -47,12 +56,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ users, onEdit, onBlock }) => {
                             </td>
                             <td className="px-6 py-4 font-mono">{user.balance.toFixed(2)} USDT</td>
                             <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                    <button onClick={() => onEdit(user.id)} className="font-medium text-sky-400 hover:underline">Редактировать</button>
-                                    <button onClick={() => onBlock(user.id)} className={`font-medium ${user.isBlocked ? 'text-green-400' : 'text-red-500'} hover:underline`}>
-                                        {user.isBlocked ? 'Разблокировать' : 'Заблокировать'}
-                                    </button>
-                                </div>
+                                <span className="font-medium text-sky-400">Детали &rarr;</span>
                             </td>
                         </tr>
                     ))}

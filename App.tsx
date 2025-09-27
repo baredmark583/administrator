@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
+import UserDetailPage from './pages/UserDetailPage';
 import ProductsPage from './pages/ProductsPage';
 import OrdersPage from './pages/OrdersPage';
 import CategoriesPage from './pages/CategoriesPage';
@@ -33,6 +34,7 @@ const AppContent: React.FC = () => {
                         <Routes>
                              <Route path="/dashboard" element={<DashboardPage />} />
                              <Route path="/users" element={<UsersPage />} />
+                             <Route path="/users/:id" element={<UserDetailPage />} />
                              <Route path="/products" element={<ProductsPage />} />
                              <Route path="/products/moderation" element={<ProductModerationPage />} />
                              <Route path="/products/categories" element={<CategoriesPage />} />
