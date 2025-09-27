@@ -27,7 +27,7 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
       throw new Error(errorData.message || 'An API error occurred');
     }
     
-    if (response.status === 204) { // No Content
+    if (response.status === 204 || response.headers.get('content-length') === '0') { // No Content
         return;
     }
 
@@ -194,6 +194,13 @@ export const backendApiService = {
         return apiFetch('/ai/generate-category-structure', {
             method: 'POST',
             body: JSON.stringify({ description }),
+        });
+    },
+
+    generateAndSaveSubcategories: async(parentId: string, parentName: string): Promise<void> => {
+        return apiFetch('/ai/generate-and-save-subcategories', {
+            method: 'POST',
+            body: JSON.stringify({ parentId, parentName }),
         });
     },
 
