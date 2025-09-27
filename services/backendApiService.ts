@@ -183,6 +183,12 @@ export const backendApiService = {
         });
     },
     
+    deleteCategory: async (id: string): Promise<void> => {
+        return apiFetch(`/categories/${id}`, {
+            method: 'DELETE',
+        });
+    },
+
     batchCreateCategories: async(categories: CategorySchema[]): Promise<void> => {
         return apiFetch('/categories/batch-create', {
             method: 'POST',

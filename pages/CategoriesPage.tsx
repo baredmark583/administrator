@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { backendApiService } from '../services/backendApiService';
-import { CategorySchema, CategoryField } from '../constants';
+import type { CategorySchema, CategoryField } from '../constants';
 
 // --- Components ---
 
@@ -69,9 +69,11 @@ interface CategoryModalProps {
 const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onDataChange, parentName }) => {
     const [editedCategory, setEditedCategory] = useState<CategorySchema>(category);
     const [isSaving, setIsSaving] = useState(false);
-    const [isAiGenerating, setIsAiGenerating] = useState(false);
     
-    const isEditing = !category.id?.startsWith('new_');
+    const modalTitle = category.id?.startsWith('new_')
+        ? (parentName ? `Новая подкатегория для "${parentName}"` : "Новая категория")
+        : `Редактор категории "${category.name}"`;
+
 
     const handleFieldUpdate = (fieldId: string, updates: Partial<CategoryField>) => {
         setEditedCategory(prev => ({
@@ -108,30 +110,6 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onData
         setIsSaving(false);
         onClose();
     };
-    
-    const handleAiGenerate = async () => {
-        if (!isEditing) return;
-
-        const confirmation = window.confirm(
-            `Это действие сгенерирует и сохранит полную структуру подкатегорий для "${category.name}", заменив все существующие. Продолжить?`
-        );
-        if (!confirmation) return;
-
-        setIsAiGenerating(true);
-        try {
-            await backendApiService.generateAndSaveSubcategories(category.id, category.name);
-            alert('Подкатегории успешно сгенерированы и сохранены!');
-            onDataChange();
-            onClose();
-        } catch (error) {
-            console.error(error);
-            alert('Не удалось сгенерировать подкатегории. ' + (error as Error).message);
-        } finally {
-            setIsAiGenerating(false);
-        }
-    };
-    
-    const modalTitle = parentName ? `Редактор подкатегории для "${parentName}"` : "Редактор категории";
 
     return (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
@@ -164,22 +142,10 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onData
                     ))}
                     <button onClick={handleAddField} className="text-sm text-primary hover:underline">+ Добавить поле</button>
                 </div>
-                <div className="p-4 mt-auto border-t border-base-300 flex justify-between items-center">
-                    {isEditing && (
-                        <button 
-                            type="button"
-                            onClick={handleAiGenerate}
-                            disabled={isAiGenerating || isSaving}
-                            className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded flex items-center gap-2 disabled:bg-gray-500"
-                        >
-                            {isAiGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : '🤖'}
-                            <span>{isAiGenerating ? 'Генерация...' : 'Заполнить AI'}</span>
-                        </button>
-                    )}
-                    <div className="flex-grow"></div>
+                <div className="p-4 mt-auto border-t border-base-300 flex justify-end items-center">
                     <div className="flex justify-end gap-3">
                         <button onClick={onClose} className="bg-base-300 hover:bg-base-200 text-white font-bold py-2 px-4 rounded">Отмена</button>
-                        <button onClick={handleSave} disabled={isSaving || isAiGenerating} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded">
+                        <button onClick={handleSave} disabled={isSaving} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded">
                             {isSaving ? 'Сохранение...' : 'Сохранить'}
                         </button>
                     </div>
@@ -189,65 +155,25 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onData
     );
 };
 
-
-interface CategoryTreeItemProps {
-    category: CategorySchema;
-    level: number;
-    getIconForCategory: (iconUrl: string | null) => JSX.Element | null;
-    onEdit: (category: CategorySchema) => void;
-    onCreateSubcategory: (parentId: string) => void;
-}
-
-const CategoryTreeItem: React.FC<CategoryTreeItemProps> = ({ category, level, getIconForCategory, onEdit, onCreateSubcategory }) => {
-    return (
-        <div style={{ marginLeft: `${level * 20}px` }}>
-            <div className="bg-base-200 p-3 rounded-md">
-                <div className="flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        {getIconForCategory(category.iconUrl)}
-                        <h3 className="font-bold text-white">{category.name}</h3>
-                        <span className="text-xs text-base-content/70">({category.fields.length} полей)</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {level < 3 && ( // Allow creating subcategories up to level 4
-                             <button onClick={() => onCreateSubcategory(category.id)} className="text-sm text-primary hover:underline">+ Добавить подкатегорию</button>
-                        )}
-                        <button onClick={() => onEdit(category)} className="text-sm text-sky-400 hover:underline">Редактировать</button>
-                    </div>
-                </div>
-            </div>
-             {category.subcategories && category.subcategories.length > 0 && (
-               <div className="mt-2 space-y-2">
-                   {category.subcategories.map(sub => (
-                       <CategoryTreeItem 
-                           key={sub.id} 
-                           category={sub} 
-                           level={level + 1} 
-                           getIconForCategory={getIconForCategory} 
-                           onEdit={onEdit} 
-                           onCreateSubcategory={onCreateSubcategory} 
-                       />
-                   ))}
-               </div>
-           )}
-        </div>
-    );
-};
-
-
 // --- Page ---
 
+type Breadcrumb = { id: string | null; name: string };
+
 const CategoriesPage: React.FC = () => {
-    const [categories, setCategories] = useState<CategorySchema[]>([]);
+    const [allCategories, setAllCategories] = useState<CategorySchema[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingCategory, setEditingCategory] = useState<CategorySchema | null>(null);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [isAiGenerating, setIsAiGenerating] = useState(false);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    
+    const [currentParentId, setCurrentParentId] = useState<string | null>(null);
+    const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([{ id: null, name: 'Главная' }]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
             const catResult = await backendApiService.getCategories();
-            setCategories(catResult);
+            setAllCategories(catResult);
         } catch (error) {
             console.error("Failed to fetch page data", error);
         } finally {
@@ -257,38 +183,95 @@ const CategoriesPage: React.FC = () => {
 
     useEffect(() => {
         fetchData();
-    }, [fetchData, refreshKey]);
-    
-    const handleEdit = (category: CategorySchema) => {
-        setEditingCategory(JSON.parse(JSON.stringify(category))); // Deep copy to avoid direct mutation
+    }, [fetchData]);
+
+    const findCategoryById = (categories: CategorySchema[], id: string): CategorySchema | null => {
+        for (const category of categories) {
+            if (category.id === id) return category;
+            if (category.subcategories) {
+                const found = findCategoryById(category.subcategories, id);
+                if (found) return found;
+            }
+        }
+        return null;
     };
     
-    const handleCreateParent = () => {
+    const currentCategories = useMemo(() => {
+        if (currentParentId === null) {
+            return allCategories;
+        }
+        const parent = findCategoryById(allCategories, currentParentId);
+        return parent?.subcategories || [];
+    }, [currentParentId, allCategories]);
+
+    const handleCategoryClick = (category: CategorySchema) => {
+        setCurrentParentId(category.id);
+        setBreadcrumbs(prev => [...prev, { id: category.id, name: category.name }]);
+    };
+    
+    const handleBreadcrumbClick = (id: string | null, index: number) => {
+        setCurrentParentId(id);
+        setBreadcrumbs(prev => prev.slice(0, index + 1));
+    };
+
+    const handleEdit = (category: CategorySchema) => {
+        setEditingCategory(JSON.parse(JSON.stringify(category)));
+    };
+    
+    const handleCreate = () => {
         const newCategory: CategorySchema = {
             id: `new_cat_${Date.now()}`,
             name: 'Новая категория',
             iconUrl: null,
             fields: [],
-            parentId: null,
+            parentId: currentParentId,
         };
         setEditingCategory(newCategory);
     };
+    
+    const handleDelete = async (category: CategorySchema) => {
+        if (deletingId) return;
 
-    const handleCreateSubcategory = (parentId: string) => {
-        const newSubcategory: CategorySchema = {
-            id: `new_subcat_${Date.now()}`,
-            name: 'Новая подкатегория',
-            iconUrl: null,
-            fields: [],
-            parentId: parentId,
-        };
-        setEditingCategory(newSubcategory);
+        const confirmation = window.confirm(
+            `Вы уверены, что хотите удалить категорию "${category.name}"? Все вложенные подкатегории будут также удалены.`
+        );
+        if (!confirmation) return;
+
+        setDeletingId(category.id);
+        try {
+            await backendApiService.deleteCategory(category.id);
+            fetchData();
+        } catch (error) {
+            console.error("Failed to delete category:", error);
+            alert('Не удалось удалить категорию. ' + (error as Error).message);
+        } finally {
+            setDeletingId(null);
+        }
     };
 
-    const getIconForCategory = (iconUrl: string | null) => {
-        if (!iconUrl) return null;
-        return <img src={iconUrl} alt="icon" className="w-6 h-6 rounded object-contain flex-shrink-0" />;
-    }
+    const handleAiGenerate = async () => {
+        const parentCategory = currentParentId ? findCategoryById(allCategories, currentParentId) : null;
+        if (!parentCategory) return;
+        
+        const confirmation = window.confirm(
+            `Это действие сгенерирует и сохранит полную структуру подкатегорий для "${parentCategory.name}", заменив все существующие. Продолжить?`
+        );
+        if (!confirmation) return;
+
+        setIsAiGenerating(true);
+        try {
+            await backendApiService.generateAndSaveSubcategories(parentCategory.id, parentCategory.name);
+            alert('Подкатегории успешно сгенерированы и сохранены!');
+            fetchData(); // Refresh all data
+        } catch (error) {
+            console.error(error);
+            alert('Не удалось сгенерировать подкатегории. ' + (error as Error).message);
+        } finally {
+            setIsAiGenerating(false);
+        }
+    };
+    
+    const currentParentName = breadcrumbs[breadcrumbs.length - 1]?.name || 'Главная';
 
     if (isLoading) {
         return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>;
@@ -296,36 +279,87 @@ const CategoriesPage: React.FC = () => {
 
     return (
         <div>
-            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h1 className="text-3xl font-bold text-white">Управление Категориями</h1>
+             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Управление Категориями</h1>
+                    <div className="text-sm text-base-content/70 mt-1">
+                        {breadcrumbs.map((crumb, index) => (
+                            <span key={crumb.id || 'root'}>
+                                <button onClick={() => handleBreadcrumbClick(crumb.id, index)} className="hover:underline">
+                                    {crumb.name}
+                                </button>
+                                {index < breadcrumbs.length - 1 && ' / '}
+                            </span>
+                        ))}
+                    </div>
+                </div>
                 <div className="flex gap-2">
-                    <button onClick={handleCreateParent} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
+                    {currentParentId && (
+                         <button 
+                            onClick={handleAiGenerate}
+                            disabled={isAiGenerating}
+                            className="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex items-center gap-2 disabled:bg-gray-500"
+                        >
+                             {isAiGenerating ? <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> : '🤖'}
+                            <span>{isAiGenerating ? 'Генерация...' : 'Сгенерировать подкатегории с AI'}</span>
+                        </button>
+                    )}
+                    <button onClick={handleCreate} className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg">
                         + Создать категорию
                     </button>
                 </div>
             </div>
             
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">
-                <div className="space-y-4">
-                    {categories.map(cat => (
-                        <CategoryTreeItem 
-                           key={cat.id} 
-                           category={cat} 
-                           level={0}
-                           getIconForCategory={getIconForCategory}
-                           onEdit={handleEdit}
-                           onCreateSubcategory={handleCreateSubcategory}
-                       />
-                    ))}
-                </div>
+                {currentCategories.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {currentCategories.map(cat => (
+                            <div key={cat.id} className="bg-base-200 p-4 rounded-lg group relative">
+                                <button
+                                    onClick={() => handleDelete(cat)}
+                                    disabled={deletingId === cat.id}
+                                    className="absolute top-2 right-2 p-1.5 bg-red-600/50 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 z-10"
+                                    title={`Удалить "${cat.name}"`}
+                                >
+                                    {deletingId === cat.id ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    ) : (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
+                                </button>
+                                <div className="flex justify-between items-center">
+                                    <button onClick={() => handleCategoryClick(cat)} className="text-left flex-grow">
+                                        <div className="flex items-center gap-3">
+                                            {cat.iconUrl && <img src={cat.iconUrl} alt={cat.name} className="w-8 h-8 rounded-md object-contain flex-shrink-0" />}
+                                            <div>
+                                                <h3 className="font-bold text-white group-hover:text-primary transition-colors">{cat.name}</h3>
+                                                <p className="text-xs text-base-content/70">{cat.subcategories?.length || 0} подкатегорий, {cat.fields.length} полей</p>
+                                            </div>
+                                        </div>
+                                    </button>
+                                     <button onClick={() => handleEdit(cat)} className="text-sm text-sky-400 hover:underline flex-shrink-0 ml-2">
+                                        Редакт.
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="text-center py-16">
+                        <h2 className="text-2xl font-bold text-white mb-2">Здесь пока пусто</h2>
+                        <p className="text-base-content/70">Создайте первую подкатегорию для раздела "{currentParentName}".</p>
+                    </div>
+                )}
             </div>
 
             {editingCategory && (
                 <CategoryModal 
                     category={editingCategory}
                     onClose={() => setEditingCategory(null)}
-                    onDataChange={() => setRefreshKey(k => k + 1)}
-                    parentName={editingCategory.parentId ? categories.find(c => c.id === editingCategory.parentId)?.name : undefined}
+                    onDataChange={fetchData}
+                    parentName={currentParentName}
                 />
             )}
         </div>
