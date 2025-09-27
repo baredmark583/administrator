@@ -13,12 +13,26 @@ export interface SalesChartDataPoint {
 }
 export interface AdminDashboardData {
     kpis: {
-        totalRevenue: number;
+        totalRevenueToday: number;
         platformProfit: number;
-        newUsers: number;
+        newOrdersToday: number;
         productsForModeration: number;
+        activeDisputes: number;
     };
     salesData: SalesChartDataPoint[];
+    recentActivity: {
+        id: string;
+        type: 'new_user' | 'new_order';
+        text: string;
+        time: string;
+    }[];
+    topSellers: {
+        id: string;
+        name: string;
+        avatarUrl: string;
+        totalRevenue: number;
+        salesCount: number;
+    }[];
 }
 
 export interface AdminPanelUser {
@@ -169,7 +183,13 @@ export const adminApiService = {
     getDashboardData: async (): Promise<AdminDashboardData> => {
         await wait(800);
         return {
-            kpis: { totalRevenue: 125340, platformProfit: 2506, newUsers: 152, productsForModeration: 1 },
+            kpis: { 
+                totalRevenueToday: 1250.55, 
+                platformProfit: 25.01, 
+                newOrdersToday: 12,
+                productsForModeration: 1,
+                activeDisputes: 1,
+            },
             salesData: Array.from({ length: 30 }, (_, i) => {
                 const date = new Date();
                 date.setDate(date.getDate() - (29 - i));
@@ -177,7 +197,16 @@ export const adminApiService = {
                     name: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                     sales: Math.floor(Math.random() * 3000) + 1000
                 };
-            })
+            }),
+            recentActivity: [
+                { id: 'act-1', type: 'new_order', text: 'Новый заказ #order-3 на 950.00 USDT', time: '5 минут назад' },
+                { id: 'act-2', type: 'new_user', text: 'Новый пользователь John Doe', time: '1 час назад' },
+                { id: 'act-3', type: 'new_order', text: 'Новый заказ #order-2 на 99.00 USDT', time: '3 часа назад' },
+            ],
+            topSellers: [
+                { id: 'user-2', name: 'Jewelry Queen', avatarUrl: 'https://picsum.photos/seed/seller2/100/100', totalRevenue: 25000, salesCount: 150 },
+                { id: 'user-1', name: 'Pottery Master', avatarUrl: 'https://picsum.photos/seed/seller1/100/100', totalRevenue: 18000, salesCount: 250 },
+            ]
         };
     },
 
