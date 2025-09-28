@@ -149,6 +149,15 @@ export interface AdminPanelDispute {
     messages: DisputeMessage[];
 }
 
+export interface AdminPanelDisputeDetails extends AdminPanelDispute {
+    buyer: AdminPanelUser;
+    seller: AdminPanelUser;
+    fullOrder: AdminPanelOrder;
+    buyerStats: { totalOrders: number; disputeRate: number; };
+    sellerStats: { totalSales: number; disputeRate: number; };
+}
+
+
 export type AdminIcon = AppIcon;
 
 
@@ -158,6 +167,7 @@ let mockUsers: AdminPanelUser[] = [
     { id: 'user-1', name: 'Pottery Master', email: 'pottery@example.com', avatarUrl: 'https://picsum.photos/seed/seller1/100/100', registrationDate: '2023-01-15', status: 'Pro', balance: 1250.75, isBlocked: false },
     { id: 'user-2', name: 'Jewelry Queen', email: 'jewelry@example.com', avatarUrl: 'https://picsum.photos/seed/seller2/100/100', registrationDate: '2023-02-20', status: 'Standard', balance: 2500, isBlocked: false },
     { id: 'user-3', name: 'Blocked User', email: 'blocked@example.com', avatarUrl: 'https://picsum.photos/seed/seller3/100/100', registrationDate: '2023-03-10', status: 'Standard', balance: 100, isBlocked: true },
+    { id: 'buyer-1', name: 'Craft Enthusiast', email: 'buyer@example.com', avatarUrl: 'https://picsum.photos/seed/buyer1/100/100', registrationDate: '2023-04-01', status: 'Standard', balance: 50, isBlocked: false },
 ];
 
 let mockProducts: AdminPanelProduct[] = [
@@ -168,13 +178,13 @@ let mockProducts: AdminPanelProduct[] = [
 ];
 
 let mockOrders: AdminPanelOrder[] = [
-    { id: 'order-1', customerName: 'Craft Enthusiast', date: '2023-05-11', total: 35.00, status: 'SHIPPED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Pottery Master', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 1, price: 35.00 }], buyer: {}, seller: {} },
+    { id: 'order-1', customerName: 'Craft Enthusiast', date: '2023-05-11', total: 35.00, status: 'SHIPPED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Pottery Master', items: [{ productId: 'prod-1', title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100', quantity: 1, price: 35.00 }], buyer: mockUsers.find(u => u.name === 'Craft Enthusiast'), seller: mockUsers.find(u => u.name === 'Pottery Master') },
     { id: 'order-2', customerName: 'Craft Enthusiast', date: '2023-05-10', total: 99.00, status: 'DELIVERED', customerInfo: { name: 'Craft Enthusiast', email: 'buyer@example.com', shippingAddress: 'Kyiv, NP 1' }, sellerName: 'Jewelry Queen', items: [{ productId: 'prod-2', title: 'Silver Necklace', imageUrl: 'https://picsum.photos/seed/prod2/100/100', quantity: 1, price: 99.00 }], buyer: {}, seller: {} },
     { id: 'order-3', customerName: 'Pottery Master', date: '2023-05-09', total: 950.00, status: 'PAID', customerInfo: { name: 'Pottery Master', email: 'pottery@example.com', shippingAddress: 'Lviv, NP 5' }, sellerName: 'Car Dealer Pro', items: [{ productId: 'prod-5', title: 'iPhone 14 Pro Max', imageUrl: 'https://picsum.photos/seed/prod5/100/100', quantity: 1, price: 950.00 }], buyer: {}, seller: {} },
 ];
 
 let mockDisputes: AdminPanelDispute[] = [
-    { id: 'order-1', createdAt: '2023-05-12', status: 'UNDER_REVIEW', order: { id: 'order-1', customerName: 'Craft Enthusiast', sellerName: 'Pottery Master', total: 35.00, items: [{ title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100' }] }, messages: [ { id: 'm1', senderId: 'buyer-1', senderName: 'Craft Enthusiast', senderAvatar: '...', timestamp: Date.now(), text: 'Item arrived broken!' }] }
+    { id: 'order-1', createdAt: '2023-05-12', status: 'UNDER_REVIEW', order: { id: 'order-1', customerName: 'Craft Enthusiast', sellerName: 'Pottery Master', total: 35.00, items: [{ title: 'Handmade Ceramic Mug', imageUrl: 'https://picsum.photos/seed/prod1/100/100' }] }, messages: [ { id: 'm1', senderId: 'buyer-1', senderName: 'Craft Enthusiast', senderAvatar: 'https://picsum.photos/seed/buyer1/100/100', timestamp: Date.now(), text: 'Товар пришел разбитым!' }] }
 ];
 
 const wait = (ms: number) => new Promise(res => setTimeout(res, ms));
@@ -261,6 +271,27 @@ export const adminApiService = {
     getDisputes: async (): Promise<AdminPanelDispute[]> => {
         await wait(500);
         return [...mockDisputes];
+    },
+    
+    getDisputeDetails: async (disputeId: string): Promise<AdminPanelDisputeDetails> => {
+        await wait(600);
+        const dispute = mockDisputes.find(d => d.id === disputeId);
+        if (!dispute) throw new Error("Dispute not found");
+
+        const fullOrder = mockOrders.find(o => o.id === dispute.id);
+        const buyer = mockUsers.find(u => u.name === fullOrder.customerName);
+        const seller = mockUsers.find(u => u.name === fullOrder.sellerName);
+
+        if (!fullOrder || !buyer || !seller) throw new Error("Could not assemble dispute details");
+
+        return {
+            ...dispute,
+            buyer,
+            seller,
+            fullOrder,
+            buyerStats: { totalOrders: 15, disputeRate: 6.6 },
+            sellerStats: { totalSales: 120, disputeRate: 0.8 },
+        };
     },
     
     updateDispute: async (dispute: AdminPanelDispute): Promise<AdminPanelDispute> => {

@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-// FIX: The AdminPanelProduct type is exported from adminApiService, not backendApiService.
 import { backendApiService } from '../services/backendApiService';
 import type { AdminPanelProduct } from '../services/adminApiService';
+import type { CategorySchema } from '../constants';
 import ProductsTable from '../components/ProductsTable';
 import ProductModerationModal from '../components/ProductModerationModal';
 
 const ProductsPage: React.FC = () => {
     const [products, setProducts] = useState<AdminPanelProduct[]>([]);
+    const [categories, setCategories] = useState<CategorySchema[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
@@ -15,10 +16,14 @@ const ProductsPage: React.FC = () => {
     const fetchProducts = async () => {
         setIsLoading(true);
         try {
-            const result = await backendApiService.getProducts();
-            setProducts(result);
+            const [productsResult, categoriesResult] = await Promise.all([
+                backendApiService.getProducts(),
+                backendApiService.getCategories()
+            ]);
+            setProducts(productsResult);
+            setCategories(categoriesResult);
         } catch (error) {
-            console.error("Failed to fetch products", error);
+            console.error("Failed to fetch products or categories", error);
         } finally {
             setIsLoading(false);
         }
@@ -59,18 +64,22 @@ const ProductsPage: React.FC = () => {
         }
     };
     
-    const handleSaveModeration = async (product: AdminPanelProduct, newStatus: 'Active' | 'Rejected', rejectionReason?: string) => {
-        const updatedProduct = { ...product, status: newStatus, rejectionReason };
+    const handleSaveProduct = async (updates: Partial<AdminPanelProduct>) => {
+        if (!moderatingProduct) return;
         
-        setProducts(prev => prev.map(p => p.id === product.id ? updatedProduct : p));
+        const originalProducts = [...products];
+        // Optimistic update
+        setProducts(prev => prev.map(p => p.id === moderatingProduct.id ? { ...p, ...updates } : p));
         setModeratingProduct(null);
 
         try {
-            await backendApiService.updateProduct(product.id, { status: newStatus, rejectionReason });
+            const updatedProduct = await backendApiService.updateProduct(moderatingProduct.id, updates);
+            // Sync with the exact backend response
+            setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
         } catch (error) {
-            console.error("Failed to update product status:", error);
-            alert("Ошибка сохранения статуса. Данные будут возвращены к исходному состоянию.");
-            fetchProducts(); // Revert on error
+            console.error("Failed to update product:", error);
+            alert("Ошибка сохранения. Данные будут возвращены к исходному состоянию.");
+            setProducts(originalProducts); // Revert on error
         }
     };
 
@@ -118,7 +127,7 @@ const ProductsPage: React.FC = () => {
                 <ProductModerationModal
                     product={moderatingProduct}
                     onClose={() => setModeratingProduct(null)}
-                    onSave={handleSaveModeration}
+                    onSave={handleSaveProduct}
                 />
             )}
         </div>

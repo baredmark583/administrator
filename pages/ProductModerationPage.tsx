@@ -1,20 +1,25 @@
 import React, { useState, useEffect } from 'react';
-// FIX: The AdminPanelProduct type is exported from adminApiService, not backendApiService.
 import { backendApiService } from '../services/backendApiService';
 import type { AdminPanelProduct } from '../services/adminApiService';
+import type { CategorySchema } from '../constants';
 import ProductsTable from '../components/ProductsTable';
 import ProductModerationModal from '../components/ProductModerationModal';
 
 const ProductModerationPage: React.FC = () => {
     const [products, setProducts] = useState<AdminPanelProduct[]>([]);
+    const [categories, setCategories] = useState<CategorySchema[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [moderatingProduct, setModeratingProduct] = useState<AdminPanelProduct | null>(null);
 
     const fetchProducts = async () => {
         setIsLoading(true);
         try {
-            const result = await backendApiService.getProducts();
-            setProducts(result.filter(p => p.status === 'Pending Moderation'));
+            const [productsResult, categoriesResult] = await Promise.all([
+                backendApiService.getProducts(),
+                backendApiService.getCategories()
+            ]);
+            setProducts(productsResult.filter(p => p.status === 'Pending Moderation'));
+            setCategories(categoriesResult);
         } catch (error) {
             console.error("Failed to fetch products for moderation", error);
         } finally {
@@ -43,17 +48,21 @@ const ProductModerationPage: React.FC = () => {
         }
     };
     
-    const handleSaveModeration = async (product: AdminPanelProduct, newStatus: 'Active' | 'Rejected', rejectionReason?: string) => {
-        // Optimistic update (remove from list)
-        setProducts(prev => prev.filter(p => p.id !== product.id));
+    const handleSaveProduct = async (updates: Partial<AdminPanelProduct>) => {
+        if (!moderatingProduct) return;
+        
+        const originalProducts = [...products];
+        // Optimistic update (remove from list as its status will change)
+        setProducts(prev => prev.filter(p => p.id !== moderatingProduct.id));
         setModeratingProduct(null);
 
         try {
-            await backendApiService.updateProduct(product.id, { status: newStatus, rejectionReason });
+            await backendApiService.updateProduct(moderatingProduct.id, updates);
         } catch (error) {
-            console.error("Failed to update product status:", error);
-            alert("Ошибка сохранения статуса. Данные будут возвращены к исходному состоянию.");
-            fetchProducts(); // Revert on error
+            console.error("Failed to update product:", error);
+            alert("Ошибка сохранения. Данные будут возвращены к исходному состоянию.");
+            setProducts(originalProducts); // Revert on error by re-adding the item
+            fetchProducts(); // Or just refetch
         }
     };
 
@@ -81,7 +90,7 @@ const ProductModerationPage: React.FC = () => {
                 <ProductModerationModal
                     product={moderatingProduct}
                     onClose={() => setModeratingProduct(null)}
-                    onSave={handleSaveModeration}
+                    onSave={handleSaveProduct}
                 />
             )}
         </div>

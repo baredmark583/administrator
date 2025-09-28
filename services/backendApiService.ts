@@ -1,6 +1,6 @@
 // This service handles REAL API calls to the NestJS backend for the admin panel.
 
-import type { AdminDashboardData, AdminPanelUser, AdminPanelProduct, AdminPanelOrder, AdminTransaction, AdminGlobalPromoCode, AdminPanelDispute, AdminIcon, AdminPanelUserDetails } from './adminApiService';
+import type { AdminDashboardData, AdminPanelUser, AdminPanelProduct, AdminPanelOrder, AdminTransaction, AdminGlobalPromoCode, AdminPanelDispute, AdminIcon, AdminPanelUserDetails, AdminPanelDisputeDetails } from './adminApiService';
 import type { CategorySchema } from '../constants';
 
 const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:3001';
@@ -156,6 +156,10 @@ export const backendApiService = {
         return apiFetch('/disputes');
     },
 
+    getDisputeDetails: async (disputeId: string): Promise<AdminPanelDisputeDetails> => {
+        return apiFetch(`/disputes/${disputeId}/details`);
+    },
+
     updateDispute: async (dispute: AdminPanelDispute): Promise<AdminPanelDispute> => {
         return apiFetch(`/disputes/${dispute.id}`, {
             method: 'PATCH',
@@ -247,6 +251,13 @@ export const backendApiService = {
         return apiFetch('/settings', {
             method: 'PATCH',
             body: JSON.stringify(settings),
+        });
+    },
+
+    testApiKey: async (service: 'gemini' | 'cloudinary'): Promise<{ success: boolean; message: string }> => {
+        return apiFetch('/settings/test-api', {
+            method: 'POST',
+            body: JSON.stringify({ service }),
         });
     },
 };
