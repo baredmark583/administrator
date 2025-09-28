@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { adminApiService, AdminPanelProduct } from '../services/adminApiService';
+import React, { useState, useEffect } from 'react';
+// FIX: The AdminPanelProduct type is exported from adminApiService, not backendApiService.
 import { backendApiService } from '../services/backendApiService';
+import type { AdminPanelProduct } from '../services/adminApiService';
 import ProductsTable from '../components/ProductsTable';
 import ProductModerationModal from '../components/ProductModerationModal';
 
@@ -25,15 +26,29 @@ const ProductModerationPage: React.FC = () => {
         fetchProducts();
     }, []);
     
+    const handleAction = (product: AdminPanelProduct) => {
+        setModeratingProduct(product);
+    };
+
+    const handleDelete = async (product: AdminPanelProduct) => {
+        if (window.confirm(`Вы уверены, что хотите удалить товар "${product.title}"? Это действие необратимо.`)) {
+            setProducts(prev => prev.filter(p => p.id !== product.id)); // Optimistic update
+            try {
+                await backendApiService.deleteProduct(product.id);
+            } catch (error) {
+                console.error("Failed to delete product:", error);
+                alert("Ошибка удаления товара.");
+                fetchProducts(); // Revert
+            }
+        }
+    };
+    
     const handleSaveModeration = async (product: AdminPanelProduct, newStatus: 'Active' | 'Rejected', rejectionReason?: string) => {
-        const updatedProduct = { ...product, status: newStatus, rejectionReason };
-        
         // Optimistic update (remove from list)
         setProducts(prev => prev.filter(p => p.id !== product.id));
         setModeratingProduct(null);
 
         try {
-            // FIX: Pass the correct payload with status and rejectionReason to the backend service.
             await backendApiService.updateProduct(product.id, { status: newStatus, rejectionReason });
         } catch (error) {
             console.error("Failed to update product status:", error);
@@ -52,7 +67,8 @@ const ProductModerationPage: React.FC = () => {
                 ) : products.length > 0 ? (
                     <ProductsTable
                         products={products}
-                        onModerate={setModeratingProduct}
+                        onAction={handleAction}
+                        onDelete={handleDelete}
                     />
                 ) : (
                     <div className="text-center py-16">

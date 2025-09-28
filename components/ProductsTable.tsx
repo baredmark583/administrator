@@ -3,7 +3,8 @@ import type { AdminPanelProduct } from '../services/adminApiService';
 
 interface ProductsTableProps {
     products: AdminPanelProduct[];
-    onModerate: (product: AdminPanelProduct) => void;
+    onAction: (product: AdminPanelProduct) => void;
+    onDelete: (product: AdminPanelProduct) => void;
 }
 
 const StatusBadge: React.FC<{ status: AdminPanelProduct['status'] }> = ({ status }) => {
@@ -19,7 +20,7 @@ const StatusBadge: React.FC<{ status: AdminPanelProduct['status'] }> = ({ status
     );
 };
 
-const ProductsTable: React.FC<ProductsTableProps> = ({ products, onModerate }) => {
+const ProductsTable: React.FC<ProductsTableProps> = ({ products, onAction, onDelete }) => {
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-base-content">
@@ -27,7 +28,6 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onModerate }) =
                     <tr>
                         <th scope="col" className="px-6 py-3">Товар</th>
                         <th scope="col" className="px-6 py-3">Продавец</th>
-                        <th scope="col" className="px-6 py-3">Категория</th>
                         <th scope="col" className="px-6 py-3">Цена</th>
                         <th scope="col" className="px-6 py-3">Статус</th>
                         <th scope="col" className="px-6 py-3">Дата</th>
@@ -44,7 +44,6 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onModerate }) =
                                 </div>
                             </td>
                             <td className="px-6 py-4">{product.sellerName}</td>
-                            <td className="px-6 py-4">{product.category}</td>
                             <td className="px-6 py-4 font-mono">{product.price.toFixed(2)} USDT</td>
                             <td className="px-6 py-4">
                                 <StatusBadge status={product.status} />
@@ -52,10 +51,8 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onModerate }) =
                             <td className="px-6 py-4">{product.dateAdded}</td>
                             <td className="px-6 py-4 text-right">
                                 <div className="flex justify-end gap-3">
-                                    {product.status === 'Pending Moderation' && (
-                                        <button onClick={() => onModerate(product)} className="font-medium text-yellow-400 hover:underline">Модерировать</button>
-                                    )}
-                                    <button onClick={() => onModerate(product)} className="font-medium text-sky-400 hover:underline">Детали</button>
+                                    <button onClick={() => onAction(product)} className="font-medium text-sky-400 hover:underline">Детали</button>
+                                    <button onClick={() => onDelete(product)} className="font-medium text-red-500 hover:underline">Удалить</button>
                                 </div>
                             </td>
                         </tr>

@@ -115,6 +115,12 @@ export const backendApiService = {
         });
     },
 
+    deleteProduct: async (productId: string): Promise<void> => {
+        return apiFetch(`/products/${productId}`, {
+            method: 'DELETE',
+        });
+    },
+
     getOrders: async (): Promise<AdminPanelOrder[]> => {
         const orders = await apiFetch('/orders');
         return orders.map((o: any) => ({
