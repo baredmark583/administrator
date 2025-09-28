@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { backendApiService } from '../services/backendApiService';
 import type { AdminPanelUserDetails, AdminPanelProduct, AdminPanelOrder, AdminPanelDispute } from '../services/adminApiService';
 import EditUserModal from '../components/EditUserModal';
+import Spinner from '../components/Spinner';
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: string }> = ({ title, value, icon }) => (
     <div className="bg-base-200 p-4 rounded-lg flex items-center gap-4">
@@ -89,7 +90,7 @@ const UserDetailPage: React.FC = () => {
     };
 
     if (isLoading) {
-        return <div className="flex justify-center items-center h-full"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>;
+        return <div className="flex justify-center items-center h-full"><Spinner size="lg" /></div>;
     }
 
     if (!user) {

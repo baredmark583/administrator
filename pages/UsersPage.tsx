@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { adminApiService, AdminPanelUser } from '../services/adminApiService';
 import { backendApiService } from '../services/backendApiService';
 import UsersTable from '../components/UsersTable';
+import Spinner from '../components/Spinner';
 
 const UsersPage: React.FC = () => {
     const [users, setUsers] = useState<AdminPanelUser[]>([]);
@@ -55,7 +56,7 @@ const UsersPage: React.FC = () => {
                 </div>
                 
                 {isLoading ? (
-                     <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>
+                     <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>
                 ) : (
                     <UsersTable 
                         users={filteredUsers}
@@ -67,3 +68,4 @@ const UsersPage: React.FC = () => {
 };
 
 export default UsersPage;
+ 

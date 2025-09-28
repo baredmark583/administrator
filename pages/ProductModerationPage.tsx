@@ -4,6 +4,7 @@ import type { AdminPanelProduct } from '../services/adminApiService';
 import type { CategorySchema } from '../constants';
 import ProductsTable from '../components/ProductsTable';
 import ProductModerationModal from '../components/ProductModerationModal';
+import Spinner from '../components/Spinner';
 
 const ProductModerationPage: React.FC = () => {
     const [products, setProducts] = useState<AdminPanelProduct[]>([]);
@@ -72,7 +73,7 @@ const ProductModerationPage: React.FC = () => {
 
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">
                 {isLoading ? (
-                     <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>
+                     <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>
                 ) : products.length > 0 ? (
                     <ProductsTable
                         products={products}

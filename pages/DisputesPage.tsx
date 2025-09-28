@@ -3,6 +3,7 @@ import { backendApiService } from '../services/backendApiService';
 import type { AdminPanelDispute, AdminPanelDisputeDetails } from '../services/adminApiService';
 import DisputesTable from '../components/DisputesTable';
 import DisputeDetailsModal from '../components/DisputeDetailsModal';
+import Spinner from '../components/Spinner';
 
 const DisputesPage: React.FC = () => {
     const [disputes, setDisputes] = useState<AdminPanelDispute[]>([]);
@@ -102,7 +103,7 @@ const DisputesPage: React.FC = () => {
                 </div>
                 
                 {isLoading || isLoadingModal ? (
-                     <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>
+                     <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>
                 ) : (
                     <DisputesTable
                         disputes={filteredDisputes}

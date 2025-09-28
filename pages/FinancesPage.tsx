@@ -5,6 +5,7 @@ import type { AdminTransaction, AdminGlobalPromoCode } from '../services/adminAp
 import TransactionsTable from '../components/TransactionsTable';
 import PromoCodesTable from '../components/PromoCodesTable';
 import CreatePromoCodeModal from '../components/CreatePromoCodeModal';
+import Spinner from '../components/Spinner';
 
 type FinanceTab = 'transactions' | 'promocodes';
 
@@ -65,7 +66,7 @@ const FinancesPage: React.FC = () => {
 
     const renderContent = () => {
         if (isLoading) {
-            return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div></div>;
+            return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;
         }
         if (activeTab === 'transactions') {
             return <TransactionsTable transactions={transactions} />;
