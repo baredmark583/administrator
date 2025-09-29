@@ -16,7 +16,7 @@ import FinancesPage from './pages/FinancesPage';
 import SettingsPage from './pages/SettingsPage';
 import DebugPage from './pages/DebugPage';
 
-const PrivateRoute: React.FC<{ children: JSX.Element }> = ({ children }) => {
+const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAdminAuth();
     if (isLoading) {
         return <div>Loading...</div>; // Or a spinner component
