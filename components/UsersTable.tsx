@@ -2,6 +2,17 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { AdminPanelUser } from '../services/adminApiService';
 
+const RoleBadge: React.FC<{ role: AdminPanelUser['role'] }> = ({ role }) => {
+    const roleMap = {
+        'USER': { text: 'User', style: 'bg-gray-500/20 text-gray-300' },
+        'MODERATOR': { text: 'Moderator', style: 'bg-sky-500/20 text-sky-300' },
+        'SUPER_ADMIN': { text: 'Admin', style: 'bg-purple-500/20 text-purple-300' },
+    };
+    const { text, style } = roleMap[role] || roleMap['USER'];
+    return <span className={`px-2 py-1 text-xs font-semibold rounded-full w-fit ${style}`}>{text}</span>;
+}
+
+
 interface UsersTableProps {
     users: AdminPanelUser[];
 }
@@ -21,6 +32,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ users }) => {
                         <th scope="col" className="px-6 py-3">Пользователь</th>
                         <th scope="col" className="px-6 py-3">Дата регистрации</th>
                         <th scope="col" className="px-6 py-3">Статус</th>
+                        <th scope="col" className="px-6 py-3">Роль</th>
                         <th scope="col" className="px-6 py-3">Баланс</th>
                         <th scope="col" className="px-6 py-3"> </th>
                     </tr>
@@ -53,6 +65,9 @@ const UsersTable: React.FC<UsersTableProps> = ({ users }) => {
                                         </span>
                                     )}
                                 </div>
+                            </td>
+                            <td className="px-6 py-4">
+                                <RoleBadge role={user.role} />
                             </td>
                             <td className="px-6 py-4 font-mono">{user.balance.toFixed(2)} USDT</td>
                             <td className="px-6 py-4 text-right">

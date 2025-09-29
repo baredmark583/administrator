@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { backendApiService } from '../services/backendApiService';
-import type { AdminPanelUserDetails, AdminPanelProduct, AdminPanelOrder, AdminPanelDispute } from '../services/adminApiService';
+import type { AdminPanelUserDetails, AdminPanelProduct, AdminPanelOrder, AdminPanelDispute, AdminPanelUser } from '../services/adminApiService';
 import EditUserModal from '../components/EditUserModal';
 import Spinner from '../components/Spinner';
 
@@ -24,18 +24,24 @@ const UserDetailPage: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState<UserDetailTab>('products');
 
+    // State for role management
+    const [selectedRole, setSelectedRole] = useState<AdminPanelUser['role']>('USER');
+    const [isSavingRole, setIsSavingRole] = useState(false);
+
     useEffect(() => {
         if (id) {
             setIsLoading(true);
             backendApiService.getUserDetails(id)
-                .then(data => setUser(data))
+                .then(data => {
+                    setUser(data);
+                    setSelectedRole(data.role || 'USER');
+                })
                 .catch(err => console.error("Failed to fetch user details", err))
                 .finally(() => setIsLoading(false));
         }
     }, [id]);
     
-    // FIX: The 'verificationLevel' property does not exist on the 'AdminPanelUser' type expected by the updateUser service. The service layer handles this mapping internally.
-    const handleSaveUser = async (updatedUser: any) => {
+    const handleSaveUser = async (updatedUser: AdminPanelUser) => {
         if (!user) return;
         const payload = {
             ...user,
@@ -43,12 +49,10 @@ const UserDetailPage: React.FC = () => {
             email: updatedUser.email,
             balance: updatedUser.balance,
             status: updatedUser.status,
+            role: updatedUser.role,
         };
         const savedUser = await backendApiService.updateUser(payload);
-        // The backend returns a full User entity which has verificationLevel.
-        // The service's return type is AdminPanelUser for simplicity, so we cast to `any`
-        // to access the property from the actual response and update the local state correctly.
-        setUser(prev => prev ? { ...prev, ...savedUser, status: (savedUser as any).verificationLevel === 'PRO' ? 'Pro' : 'Standard' } : null);
+        setUser(prev => prev ? { ...prev, ...savedUser } : null);
         setIsEditing(false);
     };
 
@@ -62,6 +66,20 @@ const UserDetailPage: React.FC = () => {
             await backendApiService.updateUser(updatedUser);
         }
     };
+
+    const handleSaveRole = async () => {
+        if (!user || user.role === selectedRole) return;
+        setIsSavingRole(true);
+        try {
+            const updatedUser = await backendApiService.updateUser({ id: user.id, role: selectedRole });
+            setUser(prev => prev ? { ...prev, role: updatedUser.role } : null);
+            alert('Роль успешно обновлена!');
+        } catch (error) {
+            alert('Не удалось обновить роль.');
+        } finally {
+            setIsSavingRole(false);
+        }
+    }
     
     const TabButton: React.FC<{ tab: UserDetailTab; label: string; count: number }> = ({ tab, label, count }) => (
         <button
@@ -121,13 +139,43 @@ const UserDetailPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-            
-            {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                <StatCard title="Баланс" value={`${user.balance.toFixed(2)} USDT`} icon="💰" />
-                <StatCard title="Всего продано (GMV)" value={`${user.financials.gmv.toFixed(2)} USDT`} icon="📈" />
-                <StatCard title="Всего куплено" value={`${user.financials.totalSpent.toFixed(2)} USDT`} icon="🛒" />
-                <StatCard title="Комиссия платформе" value={`${user.financials.platformCommission.toFixed(2)} USDT`} icon="🏦" />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                {/* Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <StatCard title="Баланс" value={`${user.balance.toFixed(2)} USDT`} icon="💰" />
+                    <StatCard title="Всего продано (GMV)" value={`${user.financials.gmv.toFixed(2)} USDT`} icon="📈" />
+                    <StatCard title="Всего куплено" value={`${user.financials.totalSpent.toFixed(2)} USDT`} icon="🛒" />
+                    <StatCard title="Комиссия платформе" value={`${user.financials.platformCommission.toFixed(2)} USDT`} icon="🏦" />
+                </div>
+                {/* Role Management */}
+                <div className="bg-base-100 p-6 rounded-lg shadow-lg">
+                    <h3 className="text-xl font-bold text-white mb-4">Управление Ролью</h3>
+                    <p className="text-sm text-base-content/70 mb-2">Назначьте роль пользователю на платформе.</p>
+                    <div className="flex items-center gap-4">
+                        <select 
+                            value={selectedRole}
+                            onChange={(e) => setSelectedRole(e.target.value as AdminPanelUser['role'])}
+                            className="w-full bg-base-200 border border-base-300 rounded-md p-2"
+                        >
+                            <option value="USER">User</option>
+                            <option value="MODERATOR">Moderator</option>
+                            <option value="SUPER_ADMIN">Super Admin</option>
+                        </select>
+                        <button 
+                            onClick={handleSaveRole}
+                            disabled={isSavingRole || user.role === selectedRole}
+                            className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-500"
+                        >
+                            {isSavingRole ? <Spinner size="sm" /> : 'Сохранить'}
+                        </button>
+                    </div>
+                    <p className="text-xs text-base-content/60 mt-2">
+                        - <span className="font-semibold">Moderator:</span> Может модерировать контент.
+                        <br/>
+                        - <span className="font-semibold">Super Admin:</span> Полный доступ к админ-панели.
+                    </p>
+                </div>
             </div>
 
             {/* Tabs */}

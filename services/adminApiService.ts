@@ -42,6 +42,8 @@ export interface AdminPanelUser {
     avatarUrl: string;
     registrationDate: string;
     status: 'Standard' | 'Pro';
+    // FIX: Add 'role' property to support admin panel functionality.
+    role: 'USER' | 'MODERATOR' | 'SUPER_ADMIN';
     balance: number;
     isBlocked: boolean;
 }
@@ -73,12 +75,27 @@ export interface AdminPanelProduct {
     rejectionReason?: string;
 }
 
+// FIX: Widened the status type to be compatible with the main app's OrderStatus type.
+export type AdminOrderStatus =
+  | 'PENDING'
+  | 'PAID'
+  | 'SHIPPED'
+  | 'SHIPPED_TO_EXPERT'
+  | 'PENDING_AUTHENTICATION'
+  | 'AUTHENTICATION_PASSED'
+  | 'NFT_ISSUED'
+  | 'AUTHENTICATION_FAILED'
+  | 'DELIVERED'
+  | 'DISPUTED'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
 export interface AdminPanelOrder {
     id: string;
     customerName: string;
     date: string;
     total: number;
-    status: 'PENDING' | 'PAID' | 'SHIPPED' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED' | 'DISPUTED';
+    status: AdminOrderStatus;
     customerInfo: {
         name: string;
         email: string;
@@ -164,10 +181,10 @@ export type AdminIcon = AppIcon;
 // --- MOCK DATA ---
 
 let mockUsers: AdminPanelUser[] = [
-    { id: 'user-1', name: 'Pottery Master', email: 'pottery@example.com', avatarUrl: 'https://picsum.photos/seed/seller1/100/100', registrationDate: '2023-01-15', status: 'Pro', balance: 1250.75, isBlocked: false },
-    { id: 'user-2', name: 'Jewelry Queen', email: 'jewelry@example.com', avatarUrl: 'https://picsum.photos/seed/seller2/100/100', registrationDate: '2023-02-20', status: 'Standard', balance: 2500, isBlocked: false },
-    { id: 'user-3', name: 'Blocked User', email: 'blocked@example.com', avatarUrl: 'https://picsum.photos/seed/seller3/100/100', registrationDate: '2023-03-10', status: 'Standard', balance: 100, isBlocked: true },
-    { id: 'buyer-1', name: 'Craft Enthusiast', email: 'buyer@example.com', avatarUrl: 'https://picsum.photos/seed/buyer1/100/100', registrationDate: '2023-04-01', status: 'Standard', balance: 50, isBlocked: false },
+    { id: 'user-1', name: 'Pottery Master', email: 'pottery@example.com', avatarUrl: 'https://picsum.photos/seed/seller1/100/100', registrationDate: '2023-01-15', status: 'Pro', balance: 1250.75, isBlocked: false, role: 'USER' },
+    { id: 'user-2', name: 'Jewelry Queen', email: 'jewelry@example.com', avatarUrl: 'https://picsum.photos/seed/seller2/100/100', registrationDate: '2023-02-20', status: 'Standard', balance: 2500, isBlocked: false, role: 'USER' },
+    { id: 'user-3', name: 'Blocked User', email: 'blocked@example.com', avatarUrl: 'https://picsum.photos/seed/seller3/100/100', registrationDate: '2023-03-10', status: 'Standard', balance: 100, isBlocked: true, role: 'USER' },
+    { id: 'buyer-1', name: 'Craft Enthusiast', email: 'buyer@example.com', avatarUrl: 'https://picsum.photos/seed/buyer1/100/100', registrationDate: '2023-04-01', status: 'Standard', balance: 50, isBlocked: false, role: 'USER' },
 ];
 
 let mockProducts: AdminPanelProduct[] = [

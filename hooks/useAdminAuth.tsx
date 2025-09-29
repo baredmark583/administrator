@@ -3,7 +3,7 @@ import { backendApiService } from '../services/backendApiService';
 
 interface AdminUser {
     email: string;
-    role: 'SUPER_ADMIN' | 'MODERATOR' | 'admin';
+    role: 'SUPER_ADMIN' | 'MODERATOR';
 }
 
 interface AdminAuthContextType {
@@ -18,37 +18,31 @@ interface AdminAuthContextType {
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('adminToken'));
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check if a token exists and is valid on initial load (optional, but good practice)
-    // For this implementation, we just trust the stored token if it exists.
-    if (token) {
-        // In a real app, you would validate the token against a '/auth/me' endpoint here.
-        // For now, we'll just set a mock user if a token is found.
-        // FIX: Cast the mock user object to AdminUser to satisfy the strict 'role' type.
-        setUser({ email: 'superadmin@cryptocraft.app', role: 'admin' } as AdminUser);
+  const [user, setUser] = useState<AdminUser | null>(() => {
+    try {
+        const item = localStorage.getItem('adminUser');
+        return item ? JSON.parse(item) : null;
+    } catch (error) {
+        return null;
     }
-    setIsLoading(false);
-  }, [token]);
-
+  });
+  const [token, setToken] = useState<string | null>(localStorage.getItem('adminToken'));
+  const [isLoading, setIsLoading] = useState(false); // No initial loading needed as we read from sync storage
 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
     try {
-        // FIX: Corrected service call to use `backendApiService` which handles real API calls.
         const { access_token, user: adminUser } = await backendApiService.login(email, pass);
         localStorage.setItem('adminToken', access_token);
+        localStorage.setItem('adminUser', JSON.stringify(adminUser));
         setToken(access_token);
         setUser(adminUser as AdminUser);
     } catch (error) {
-        // Clear any stale tokens on login failure
         localStorage.removeItem('adminToken');
+        localStorage.removeItem('adminUser');
         setToken(null);
         setUser(null);
-        throw error; // Re-throw for the login page to handle
+        throw error;
     } finally {
         setIsLoading(false);
     }
@@ -58,6 +52,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
     setUser(null);
     setToken(null);
     localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminUser');
   };
 
   const value = useMemo(() => ({

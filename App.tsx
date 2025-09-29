@@ -7,61 +7,59 @@ import DashboardPage from './pages/DashboardPage';
 import UsersPage from './pages/UsersPage';
 import UserDetailPage from './pages/UserDetailPage';
 import ProductsPage from './pages/ProductsPage';
+import ProductModerationPage from './pages/ProductModerationPage';
 import OrdersPage from './pages/OrdersPage';
-import CategoriesPage from './pages/CategoriesPage';
 import DisputesPage from './pages/DisputesPage';
+import CategoriesPage from './pages/CategoriesPage';
+import IconsPage from './pages/IconsPage';
 import FinancesPage from './pages/FinancesPage';
 import SettingsPage from './pages/SettingsPage';
 import DebugPage from './pages/DebugPage';
-import ProductModerationPage from './pages/ProductModerationPage';
-import IconsPage from './pages/IconsPage';
 
-const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated } = useAdminAuth();
-    return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+const PrivateRoute: React.FC<{ children: JSX.Element }> = ({ children }) => {
+    const { isAuthenticated, isLoading } = useAdminAuth();
+    if (isLoading) {
+        return <div>Loading...</div>; // Or a spinner component
+    }
+    return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
-const AppContent: React.FC = () => {
-    const { isAuthenticated } = useAdminAuth();
+const AppRoutes: React.FC = () => {
+    const { isAuthenticated, isLoading } = useAdminAuth();
+
+    if (isLoading) {
+        return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    }
 
     return (
         <Routes>
-            <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />} />
-
-            <Route path="/*" element={
-                <PrivateRoute>
-                    <Layout>
-                        <Routes>
-                             <Route path="/dashboard" element={<DashboardPage />} />
-                             <Route path="/users" element={<UsersPage />} />
-                             <Route path="/users/:id" element={<UserDetailPage />} />
-                             <Route path="/products" element={<ProductsPage />} />
-                             <Route path="/products/moderation" element={<ProductModerationPage />} />
-                             <Route path="/categories" element={<CategoriesPage />} />
-                             <Route path="/icons" element={<IconsPage />} />
-                             <Route path="/orders" element={<OrdersPage />} />
-                             <Route path="/finances/transactions" element={<FinancesPage />} />
-                             <Route path="/finances/promocodes" element={<FinancesPage />} />
-                             <Route path="/disputes" element={<DisputesPage />} />
-                             <Route path="/settings" element={<SettingsPage />} />
-                             <Route path="/debug" element={<DebugPage />} />
-                             <Route path="/" element={<Navigate to="/dashboard" />} />
-                        </Routes>
-                    </Layout>
-                </PrivateRoute>
-            } />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<PrivateRoute><Layout><Navigate to="/dashboard" /></Layout></PrivateRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute><Layout><DashboardPage /></Layout></PrivateRoute>} />
+            <Route path="/users" element={<PrivateRoute><Layout><UsersPage /></Layout></PrivateRoute>} />
+            <Route path="/users/:id" element={<PrivateRoute><Layout><UserDetailPage /></Layout></PrivateRoute>} />
+            <Route path="/products" element={<PrivateRoute><Layout><ProductsPage /></Layout></PrivateRoute>} />
+            <Route path="/moderation" element={<PrivateRoute><Layout><ProductModerationPage /></Layout></PrivateRoute>} />
+            <Route path="/orders" element={<PrivateRoute><Layout><OrdersPage /></Layout></PrivateRoute>} />
+            <Route path="/disputes" element={<PrivateRoute><Layout><DisputesPage /></Layout></PrivateRoute>} />
+            <Route path="/categories" element={<PrivateRoute><Layout><CategoriesPage /></Layout></PrivateRoute>} />
+            <Route path="/icons" element={<PrivateRoute><Layout><IconsPage /></Layout></PrivateRoute>} />
+            <Route path="/finances/*" element={<PrivateRoute><Layout><FinancesPage /></Layout></PrivateRoute>} />
+            <Route path="/settings" element={<PrivateRoute><Layout><SettingsPage /></Layout></PrivateRoute>} />
+            <Route path="/debug" element={<PrivateRoute><Layout><DebugPage /></Layout></PrivateRoute>} />
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} />} />
         </Routes>
     );
 };
 
 const App: React.FC = () => {
-    return (
+  return (
+    <Router basename="/admin">
         <AdminAuthProvider>
-            <Router>
-                <AppContent />
-            </Router>
+            <AppRoutes />
         </AdminAuthProvider>
-    );
+    </Router>
+  );
 };
 
 export default App;

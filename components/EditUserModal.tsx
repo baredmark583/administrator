@@ -56,6 +56,14 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, onClose, onSave }) 
                                 <input type="number" name="balance" value={formData.balance} onChange={handleChange} step="0.01" className="w-full bg-base-200 border border-base-300 rounded-md p-2"/>
                             </div>
                         </div>
+                         <div>
+                            <label className="block text-sm font-medium text-base-content/70 mb-1">Роль</label>
+                            <select name="role" value={formData.role} onChange={handleChange} className="w-full bg-base-200 border border-base-300 rounded-md p-2">
+                                <option value="USER">User</option>
+                                <option value="MODERATOR">Moderator</option>
+                                <option value="SUPER_ADMIN">Super Admin</option>
+                            </select>
+                        </div>
                     </div>
                     <div className="p-4 bg-base-200/50 flex justify-end gap-3 rounded-b-lg">
                         <button type="button" onClick={onClose} disabled={isSaving} className="bg-base-300 hover:bg-base-200 text-white font-bold py-2 px-4 rounded">Отмена</button>
