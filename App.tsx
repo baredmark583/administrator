@@ -54,7 +54,7 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Router basename="/admin">
+    <Router>
         <AdminAuthProvider>
             <AppRoutes />
         </AdminAuthProvider>
