@@ -6,6 +6,12 @@ import type { CategorySchema } from '../constants';
 // Re-defining some types here for clarity and to match what the admin panel needs.
 // In a real monorepo, these would be shared.
 
+// FIX: Added Setting type for settings management.
+export interface Setting {
+    key: string;
+    value: string;
+}
+
 export interface SalesChartDataPoint {
     name: string;
     sales: number;
@@ -471,5 +477,33 @@ export const backendApiService = {
     },
     deleteGlobalPromoCode: async(id: string): Promise<void> => {
         return Promise.resolve();
+    },
+
+    // FIX: Added missing methods for Telegram and Settings.
+    // TELEGRAM
+    sendMessageToUser: async(userId: string, message: string): Promise<{ message: string }> => {
+        return apiFetch('/telegram/send-message', {
+            method: 'POST',
+            body: JSON.stringify({ userId, message }),
+        });
+    },
+
+    broadcastMessage: async (message: string): Promise<{ message: string }> => {
+        return apiFetch('/telegram/broadcast', {
+            method: 'POST',
+            body: JSON.stringify({ message }),
+        });
+    },
+
+    // SETTINGS
+    getSettings: async (): Promise<Setting[]> => {
+        return apiFetch('/settings');
+    },
+
+    updateSettings: async(settings: Setting[]): Promise<Setting[]> => {
+        return apiFetch('/settings', {
+            method: 'PATCH',
+            body: JSON.stringify(settings),
+        });
     },
 };

@@ -45,6 +45,49 @@ const TopSellers: React.FC<{ sellers: AdminDashboardData['topSellers'] }> = ({ s
     </div>
 );
 
+const BroadcastPanel: React.FC = () => {
+    const [message, setMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const [result, setResult] = useState('');
+
+    const handleSend = async () => {
+        if (!message.trim()) return;
+        setIsSending(true);
+        setResult('');
+        try {
+            const response = await backendApiService.broadcastMessage(message);
+            setResult(response.message);
+            setMessage('');
+        } catch (error) {
+            setResult('Ошибка отправки: ' + (error as Error).message);
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    return (
+        <div className="bg-base-100 p-6 rounded-lg shadow-lg">
+            <h2 className="text-xl font-bold text-white mb-2">Массовая рассылка в Telegram</h2>
+            <p className="text-sm text-base-content/70 mb-4">Отправьте сообщение всем пользователям, у которых есть Telegram ID.</p>
+            <textarea
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                rows={4}
+                placeholder="Введите ваше сообщение здесь..."
+                className="w-full bg-base-200 border border-base-300 rounded-md p-2 text-sm"
+                disabled={isSending}
+            />
+            <button
+                onClick={handleSend}
+                disabled={isSending || !message.trim()}
+                className="mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex justify-center items-center disabled:bg-gray-500"
+            >
+                {isSending ? <Spinner size="sm" /> : 'Отправить всем'}
+            </button>
+            {result && <p className="text-xs text-center mt-2 text-base-content/80">{result}</p>}
+        </div>
+    );
+};
 
 const DashboardPage: React.FC = () => {
     const [data, setData] = useState<AdminDashboardData | null>(null);
@@ -77,7 +120,6 @@ const DashboardPage: React.FC = () => {
         <div>
             <h1 className="text-3xl font-bold text-white mb-6">Dashboard</h1>
             
-            {/* KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <StatCard 
                     title="Оборот за сегодня" 
@@ -100,7 +142,7 @@ const DashboardPage: React.FC = () => {
                 <StatCard 
                     title="На модерации" 
                     value={data.kpis.productsForModeration.toLocaleString()} 
-                    icon={icon("M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24-.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z")}
+                    icon={icon("M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12-.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z")}
                     color="text-yellow-400"
                 />
             </div>
@@ -114,11 +156,13 @@ const DashboardPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Side Panels */}
                 <div className="lg:col-span-1 space-y-8">
                     <ActivityFeed activities={data.recentActivity} />
                     <TopSellers sellers={data.topSellers} />
                 </div>
+            </div>
+            <div className="mt-8">
+                 <BroadcastPanel />
             </div>
         </div>
     );

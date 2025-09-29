@@ -17,25 +17,63 @@ const StatCard: React.FC<{ title: string; value: string | number; icon: string }
 
 type UserDetailTab = 'products' | 'sales' | 'purchases' | 'disputes';
 
+const TelegramMessageSender: React.FC<{ userId: string, userName: string }> = ({ userId, userName }) => {
+    const [message, setMessage] = useState('');
+    const [isSending, setIsSending] = useState(false);
+    const [result, setResult] = useState('');
+
+    const handleSend = async () => {
+        if (!message.trim()) return;
+        setIsSending(true);
+        setResult('');
+        try {
+            const response = await backendApiService.sendMessageToUser(userId, message);
+            setResult(response.message);
+            setMessage('');
+        } catch (error) {
+            setResult('Ошибка отправки: ' + (error as Error).message);
+        } finally {
+            setIsSending(false);
+        }
+    };
+    
+    return (
+        <div className="bg-base-100 p-6 rounded-lg shadow-lg">
+            <h3 className="text-xl font-bold text-white mb-2">Отправить сообщение в Telegram</h3>
+            <p className="text-sm text-base-content/70 mb-4">Сообщение будет отправлено пользователю {userName} через бота.</p>
+             <textarea
+                value={message}
+                onChange={e => setMessage(e.target.value)}
+                rows={3}
+                placeholder="Ваше сообщение..."
+                className="w-full bg-base-200 border border-base-300 rounded-md p-2 text-sm"
+                disabled={isSending}
+            />
+            <button
+                onClick={handleSend}
+                disabled={isSending || !message.trim()}
+                className="mt-2 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg flex justify-center items-center disabled:bg-gray-500"
+            >
+                {isSending ? <Spinner size="sm" /> : 'Отправить'}
+            </button>
+            {result && <p className="text-xs text-center mt-2 text-base-content/80">{result}</p>}
+        </div>
+    )
+}
+
 const UserDetailPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [user, setUser] = useState<AdminPanelUserDetails | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState<UserDetailTab>('products');
-
-    // State for role management
-    const [selectedRole, setSelectedRole] = useState<AdminPanelUser['role']>('USER');
     const [isSavingRole, setIsSavingRole] = useState(false);
 
     useEffect(() => {
         if (id) {
             setIsLoading(true);
             backendApiService.getUserDetails(id)
-                .then(data => {
-                    setUser(data);
-                    setSelectedRole(data.role || 'USER');
-                })
+                .then(setUser)
                 .catch(err => console.error("Failed to fetch user details", err))
                 .finally(() => setIsLoading(false));
         }
@@ -67,11 +105,11 @@ const UserDetailPage: React.FC = () => {
         }
     };
 
-    const handleSaveRole = async () => {
-        if (!user || user.role === selectedRole) return;
+    const handleSaveRole = async (newRole: AdminPanelUser['role']) => {
+        if (!user || user.role === newRole) return;
         setIsSavingRole(true);
         try {
-            const updatedUser = await backendApiService.updateUser({ id: user.id, role: selectedRole });
+            const updatedUser = await backendApiService.updateUser({ id: user.id, role: newRole });
             setUser(prev => prev ? { ...prev, role: updatedUser.role } : null);
             alert('Роль успешно обновлена!');
         } catch (error) {
@@ -119,7 +157,6 @@ const UserDetailPage: React.FC = () => {
         <div>
              <Link to="/users" className="text-sm text-sky-400 hover:underline mb-4 inline-block">&larr; Вернуться ко всем пользователям</Link>
 
-            {/* User Header */}
             <div className="bg-base-100 p-6 rounded-lg shadow-lg mb-6">
                 <div className="flex flex-col sm:flex-row items-center gap-6">
                     <img src={user.avatarUrl} alt={user.name} className="w-24 h-24 rounded-full border-4 border-base-300"/>
@@ -141,44 +178,15 @@ const UserDetailPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                {/* Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <StatCard title="Баланс" value={`${user.balance.toFixed(2)} USDT`} icon="💰" />
                     <StatCard title="Всего продано (GMV)" value={`${user.financials.gmv.toFixed(2)} USDT`} icon="📈" />
                     <StatCard title="Всего куплено" value={`${user.financials.totalSpent.toFixed(2)} USDT`} icon="🛒" />
                     <StatCard title="Комиссия платформе" value={`${user.financials.platformCommission.toFixed(2)} USDT`} icon="🏦" />
                 </div>
-                {/* Role Management */}
-                <div className="bg-base-100 p-6 rounded-lg shadow-lg">
-                    <h3 className="text-xl font-bold text-white mb-4">Управление Ролью</h3>
-                    <p className="text-sm text-base-content/70 mb-2">Назначьте роль пользователю на платформе.</p>
-                    <div className="flex items-center gap-4">
-                        <select 
-                            value={selectedRole}
-                            onChange={(e) => setSelectedRole(e.target.value as AdminPanelUser['role'])}
-                            className="w-full bg-base-200 border border-base-300 rounded-md p-2"
-                        >
-                            <option value="USER">User</option>
-                            <option value="MODERATOR">Moderator</option>
-                            <option value="SUPER_ADMIN">Super Admin</option>
-                        </select>
-                        <button 
-                            onClick={handleSaveRole}
-                            disabled={isSavingRole || user.role === selectedRole}
-                            className="bg-primary hover:bg-primary-focus text-white font-bold py-2 px-4 rounded-lg disabled:bg-gray-500"
-                        >
-                            {isSavingRole ? <Spinner size="sm" /> : 'Сохранить'}
-                        </button>
-                    </div>
-                    <p className="text-xs text-base-content/60 mt-2">
-                        - <span className="font-semibold">Moderator:</span> Может модерировать контент.
-                        <br/>
-                        - <span className="font-semibold">Super Admin:</span> Полный доступ к админ-панели.
-                    </p>
-                </div>
+                <TelegramMessageSender userId={user.id} userName={user.name} />
             </div>
 
-            {/* Tabs */}
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">
                  <div className="flex flex-wrap gap-2 mb-4 border-b border-base-300 pb-4">
                     <TabButton tab="products" label="Товары" count={user.products.length} />
@@ -193,8 +201,6 @@ const UserDetailPage: React.FC = () => {
         </div>
     );
 };
-
-// --- Sub-components for tabs ---
 
 const SimpleProductsTable: React.FC<{products: AdminPanelProduct[]}> = ({products}) => (
     <div className="overflow-x-auto"><table className="w-full text-sm">
@@ -224,7 +230,7 @@ const SimpleDisputesTable: React.FC<{disputes: AdminPanelDispute[]}> = ({dispute
         <thead className="text-xs text-base-content/70 uppercase"><tr><th className="px-4 py-2">ID Заказа</th><th className="px-4 py-2">Создан</th><th className="px-4 py-2">Статус</th></tr></thead>
         <tbody>{disputes.map(d => <tr key={d.id} className="border-b border-base-300/50">
             <td className="px-4 py-2 font-mono text-white/70">{d.order.id.slice(0,8)}...</td>
-            <td className="px-4 py-2 text-white">{new Date(d.createdAt).toLocaleDateString()}</td>
+            <td className="px-4 py-2 text-white">{d.createdAt}</td>
             <td className="px-4 py-2">{d.status}</td>
         </tr>)}</tbody>
     </table></div>
