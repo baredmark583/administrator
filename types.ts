@@ -81,3 +81,18 @@ export interface Product {
   rejectionReason?: string;
   createdAt: string;
 }
+// FIX: Added PromoCode interface to resolve import error.
+export interface PromoCode {
+    id: string;
+    sellerId: string;
+    code: string;
+    discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+    discountValue: number;
+    isActive: boolean;
+    uses: number;
+    maxUses?: number;
+    minPurchaseAmount?: number;
+    scope: 'ENTIRE_ORDER' | 'CATEGORY';
+    applicableCategory?: string;
+    validUntil?: number;
+}

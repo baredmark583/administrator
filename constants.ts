@@ -1,6 +1,9 @@
 // This file contains a copy of the CATEGORIES constant from the main application,
 // required for the admin panel's backend API service.
 
+// FIX: Added TREASURY_WALLET_ADDRESS to resolve import error.
+export const TREASURY_WALLET_ADDRESS = "UQARnCdfRw0VcT86ApqHJEdMGzQU3T_MnPbNs71A6nOXcF91";
+
 export interface CategoryField {
   // FIX: Added optional id to match backend entity and support client-side operations.
   id?: string;
