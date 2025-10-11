@@ -16,6 +16,7 @@ import FinancesPage from './pages/FinancesPage';
 import SettingsPage from './pages/SettingsPage';
 import DebugPage from './pages/DebugPage';
 import GovernancePage from './pages/GovernancePage';
+import LiveStreamsPage from './pages/LiveStreamsPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAdminAuth();
@@ -44,6 +45,7 @@ const AppRoutes: React.FC = () => {
             <Route path="/orders" element={<PrivateRoute><Layout><OrdersPage /></Layout></PrivateRoute>} />
             <Route path="/disputes" element={<PrivateRoute><Layout><DisputesPage /></Layout></PrivateRoute>} />
             <Route path="/governance" element={<PrivateRoute><Layout><GovernancePage /></Layout></PrivateRoute>} />
+            <Route path="/livestreams" element={<PrivateRoute><Layout><LiveStreamsPage /></Layout></PrivateRoute>} />
             <Route path="/categories" element={<PrivateRoute><Layout><CategoriesPage /></Layout></PrivateRoute>} />
             <Route path="/icons" element={<PrivateRoute><Layout><IconsPage /></Layout></PrivateRoute>} />
             <Route path="/finances/*" element={<PrivateRoute><Layout><FinancesPage /></Layout></PrivateRoute>} />

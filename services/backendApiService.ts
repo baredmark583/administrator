@@ -1,5 +1,5 @@
 // This service handles all communication with the backend API for the admin panel.
-import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon, Proposal as AppProposal } from '../../types';
+import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon, Proposal as AppProposal, LiveStream } from '../../types';
 import type { CategorySchema } from '../constants';
 
 // --- TYPES ---
@@ -47,6 +47,7 @@ export interface AdminPanelUser {
     avatarUrl: string;
     registrationDate: string; // Formatted date string
     status: 'Standard' | 'Pro'; // Mapped from verificationLevel
+    // FIX: Add 'role' property to support admin panel functionality.
     role: 'USER' | 'MODERATOR' | 'SUPER_ADMIN';
     balance: number;
     isBlocked: boolean;
@@ -551,5 +552,11 @@ export const backendApiService = {
             method: 'PATCH',
             body: JSON.stringify(settings),
         });
+    },
+
+    // LIVESTREAMS
+    getLiveStreams: async(): Promise<LiveStream[]> => {
+        // This is a public endpoint, so we can call it directly.
+        return apiFetch('/livestreams');
     },
 };
