@@ -1,5 +1,5 @@
 // This service handles all communication with the backend API for the admin panel.
-import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon } from '../../types';
+import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon, Proposal as AppProposal } from '../../types';
 import type { CategorySchema } from '../constants';
 
 // --- TYPES ---
@@ -158,6 +158,17 @@ export interface AdminPanelDisputeDetails extends AdminPanelDispute {
 }
 
 export type AdminIcon = AppIcon;
+
+export interface AdminPanelProposal {
+    id: string;
+    title: string;
+    proposerName: string;
+    createdAt: string;
+    endsAt: string;
+    status: 'ACTIVE' | 'PASSED' | 'REJECTED' | 'EXECUTED';
+    votesFor: number;
+    votesAgainst: number;
+}
 
 
 // --- API IMPLEMENTATION ---
@@ -478,6 +489,41 @@ export const backendApiService = {
     deleteGlobalPromoCode: async(id: string): Promise<void> => {
         return Promise.resolve();
     },
+
+    // GOVERNANCE
+    getAdminProposals: async (): Promise<AdminPanelProposal[]> => {
+        const proposals: AppProposal[] = await apiFetch('/governance/proposals/admin');
+        return proposals.map(p => ({
+            id: p.id,
+            title: p.title,
+            proposerName: p.proposer.name,
+            createdAt: new Date(p.createdAt).toLocaleDateString(),
+            endsAt: new Date(p.endsAt).toLocaleDateString(),
+            status: p.status,
+            votesFor: p.votesFor,
+            votesAgainst: p.votesAgainst,
+        }));
+    },
+    updateProposal: async (id: string, updates: { status: 'EXECUTED' }): Promise<AdminPanelProposal> => {
+        const updated: AppProposal = await apiFetch(`/governance/proposals/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(updates),
+        });
+        return {
+            id: updated.id,
+            title: updated.title,
+            proposerName: updated.proposer.name,
+            createdAt: new Date(updated.createdAt).toLocaleDateString(),
+            endsAt: new Date(updated.endsAt).toLocaleDateString(),
+            status: updated.status,
+            votesFor: updated.votesFor,
+            votesAgainst: updated.votesAgainst,
+        };
+    },
+    deleteProposal: async (id: string): Promise<void> => {
+        return apiFetch(`/governance/proposals/${id}`, { method: 'DELETE' });
+    },
+
 
     // FIX: Added missing methods for Telegram and Settings.
     // TELEGRAM
