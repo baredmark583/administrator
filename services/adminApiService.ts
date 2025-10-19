@@ -2,8 +2,8 @@
 // allowing for frontend development without a live backend.
 
 import { CATEGORIES, CategorySchema } from "../constants";
-import type { Product, User, Order, Dispute } from '../../types';
-import type { Icon as AppIcon } from '../../types';
+import type { Product, User, Order, Dispute } from '../types';
+import type { Icon as AppIcon } from '../types';
 
 // --- TYPES ---
 

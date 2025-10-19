@@ -1,5 +1,5 @@
 // This service handles all communication with the backend API for the admin panel.
-import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon, Proposal as AppProposal, LiveStream } from '../../types';
+import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon, Proposal as AppProposal, LiveStream } from '../types';
 import type { CategorySchema } from '../constants';
 
 // --- TYPES ---
