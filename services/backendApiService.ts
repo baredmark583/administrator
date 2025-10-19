@@ -217,6 +217,10 @@ export const backendApiService = {
         });
     },
 
+    getMe: async (): Promise<{id?: string, name?: string, email: string, role: 'SUPER_ADMIN' | 'MODERATOR'}> => {
+        return apiFetch('/auth/me');
+    },
+
     getDashboardData: async (): Promise<AdminDashboardData> => {
         const data = await apiFetch('/dashboard');
         // Simple mapping, in real app might be more complex

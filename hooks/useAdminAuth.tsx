@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useMemo, useEffect, useCallback } from 'react';
 import { backendApiService } from '../services/backendApiService';
 
 interface AdminUser {
+    id?: string;
+    name?: string;
     email: string;
     role: 'SUPER_ADMIN' | 'MODERATOR';
 }
@@ -18,16 +20,32 @@ interface AdminAuthContextType {
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<AdminUser | null>(() => {
-    try {
-        const item = localStorage.getItem('adminUser');
-        return item ? JSON.parse(item) : null;
-    } catch (error) {
-        return null;
-    }
-  });
-  const [token, setToken] = useState<string | null>(localStorage.getItem('adminToken'));
-  const [isLoading, setIsLoading] = useState(false); // No initial loading needed as we read from sync storage
+  const [user, setUser] = useState<AdminUser | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start loading to validate token
+
+  useEffect(() => {
+    const validateToken = async () => {
+      const existingToken = localStorage.getItem('adminToken');
+      if (existingToken) {
+        try {
+          const adminData = await backendApiService.getMe();
+          setUser(adminData);
+          setToken(existingToken);
+        } catch (error) {
+          console.error("Admin token validation failed:", error);
+          // Token is invalid, clear storage
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminUser');
+          setUser(null);
+          setToken(null);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    validateToken();
+  }, []);
 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
@@ -48,12 +66,12 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
-  };
+  }, []);
 
   const value = useMemo(() => ({
     user,
@@ -62,7 +80,7 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
     isLoading,
     login,
     logout,
-  }), [user, token, isLoading]);
+  }), [user, token, isLoading, login, logout]);
 
   return (
     <AdminAuthContext.Provider value={value}>
