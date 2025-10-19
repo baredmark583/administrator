@@ -65,4 +65,9 @@ export const SYSTEM_ICONS: SystemIcon[] = [
 
     // Checkout
     { key: 'checkout-warning', label: 'Предупреждение (Оформление заказа)', description: 'Иконка для предупреждения о прямой оплате.', suggestionUrl: 'https://api.iconify.design/mdi/alert-triangle.svg' },
+
+    // Currencies
+    { key: 'currency-usdt', label: 'Логотип USDT', description: 'Иконка валюты USDT, используемая в ценах.', suggestionUrl: 'https://api.iconify.design/cryptocurrency-color/usdt.svg' },
+    { key: 'currency-ton', label: 'Логотип TON', description: 'Иконка валюты TON, используемая в ценах.', suggestionUrl: 'https://api.iconify.design/cryptocurrency-color/ton.svg' },
+    { key: 'currency-usdc', label: 'Логотип USDC', description: 'Иконка валюты USDC, используемая в ценах.', suggestionUrl: 'https://api.iconify.design/cryptocurrency-color/usdc.svg' },
 ];
