@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { User, Product, PromoCode } from '../types';
 import { apiService } from '../services/apiService';
 import Spinner from './Spinner';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface OfferModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface OfferModalProps {
 }
 
 const OfferModal: React.FC<OfferModalProps> = ({ isOpen, onClose, recipient, product }) => {
+  const { getFormattedPrice } = useCurrency();
   const [promoCodes, setPromoCodes] = useState<PromoCode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [submittingId, setSubmittingId] = useState<string | null>(null);
@@ -95,12 +97,12 @@ const OfferModal: React.FC<OfferModalProps> = ({ isOpen, onClose, recipient, pro
                         <div key={promo.id} className={`p-3 rounded-lg flex items-center gap-4 transition-colors ${isSent ? 'bg-green-500/20' : 'bg-base-200/50'}`}>
                             <div className="flex-1">
                                 {/* FIX: Use discountValue and check discountType to display the offer correctly. */}
-                                <p className="font-bold text-lg text-primary">{promo.discountValue}{promo.discountType === 'PERCENTAGE' ? '%' : ' USDT'} скидка</p>
+                                <p className="font-bold text-lg text-primary">{promo.discountType === 'PERCENTAGE' ? `${promo.discountValue}%` : getFormattedPrice(promo.discountValue)} скидка</p>
                                 <p className="text-sm text-base-content/70">
-                                    Цена: <span className="line-through">{(product.price || 0).toFixed(2)}</span> <span className="font-semibold text-white">{discountedPrice} USDT</span>
+                                    Цена: <span className="line-through">{getFormattedPrice(product.price || 0)}</span> <span className="font-semibold text-white">{getFormattedPrice(parseFloat(discountedPrice))}</span>
                                 </p>
                                  <p className="text-sm text-green-400">
-                                    Ваша прибыль: <span className="font-bold">{profit} USDT</span>
+                                    Ваша прибыль: <span className="font-bold">{getFormattedPrice(parseFloat(profit))}</span>
                                 </p>
                             </div>
                             <button 

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AdminTransaction } from '../services/adminApiService';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface TransactionsTableProps {
     transactions: AdminTransaction[];
@@ -28,6 +29,7 @@ const StatusBadge: React.FC<{ status: AdminTransaction['status'] }> = ({ status 
 };
 
 const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) => {
+     const { getFormattedPrice } = useCurrency();
      if (transactions.length === 0) {
         return <div className="text-center py-16"><p className="text-base-content/70">Транзакции не найдены.</p></div>;
     }
@@ -55,7 +57,8 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({ transactions }) =
                             <td className="px-6 py-4">{txn.from.name}</td>
                             <td className="px-6 py-4">{txn.to.name}</td>
                             <td className={`px-6 py-4 font-mono font-semibold ${txn.type === 'Withdrawal' ? 'text-red-400' : 'text-green-400'}`}>
-                                {txn.type === 'Withdrawal' ? '-' : '+'}{txn.amount.toFixed(2)}
+                                {txn.type === 'Withdrawal' ? '-' : '+'}
+                                {getFormattedPrice(txn.amount)}
                             </td>
                             <td className="px-6 py-4"><StatusBadge status={txn.status} /></td>
                         </tr>

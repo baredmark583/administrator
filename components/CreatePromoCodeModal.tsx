@@ -65,7 +65,7 @@ const CreatePromoCodeModal: React.FC<CreatePromoCodeModalProps> = ({ isOpen, onC
                                     className="w-full bg-base-200 border border-base-300 rounded-md p-2"
                                 >
                                     <option value="PERCENTAGE">Процент (%)</option>
-                                    <option value="FIXED_AMOUNT">Фикс. сумма (USDT)</option>
+                                    <option value="FIXED_AMOUNT">Фикс. сумма</option>
                                 </select>
                             </div>
                             <div>

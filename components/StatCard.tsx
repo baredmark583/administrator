@@ -2,7 +2,8 @@ import React from 'react';
 
 interface StatCardProps {
     title: string;
-    value: string | number;
+    // FIX: Changed value prop type to React.ReactNode to accept JSX from getFormattedPrice.
+    value: React.ReactNode;
     icon: React.ReactElement;
     color?: string;
 }

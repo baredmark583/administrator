@@ -9,7 +9,7 @@ interface Setting {
 
 const SETTING_DESCRIPTIONS: Record<string, string> = {
     PLATFORM_COMMISSION_PERCENT: 'Комиссия платформы в процентах (например, 2.5 для 2.5%).',
-    PRO_VERIFICATION_FEE_USDT: 'Стоимость получения Pro-статуса в USDT.',
+    PRO_VERIFICATION_FEE_USDT: 'Стоимость получения Pro-статуса в основной валюте (USDT).',
     SITE_MAINTENANCE_MODE: 'Включить режим обслуживания (true/false). Сайт будет недоступен для пользователей.',
 };
 

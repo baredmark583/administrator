@@ -52,7 +52,7 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ user, onClose, onSave }) 
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-base-content/70 mb-1">Баланс (USDT)</label>
+                                <label className="block text-sm font-medium text-base-content/70 mb-1">Баланс</label>
                                 <input type="number" name="balance" value={formData.balance} onChange={handleChange} step="0.01" className="w-full bg-base-200 border border-base-300 rounded-md p-2"/>
                             </div>
                         </div>
