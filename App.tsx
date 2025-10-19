@@ -17,6 +17,8 @@ import SettingsPage from './pages/SettingsPage';
 import DebugPage from './pages/DebugPage';
 import GovernancePage from './pages/GovernancePage';
 import LiveStreamsPage from './pages/LiveStreamsPage';
+import { IconProvider } from './hooks/useIcons';
+import { CurrencyProvider } from './hooks/useCurrency';
 
 const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
     const { isAuthenticated, isLoading } = useAdminAuth();
@@ -60,7 +62,11 @@ const App: React.FC = () => {
   return (
     <Router>
         <AdminAuthProvider>
-            <AppRoutes />
+          <IconProvider>
+            <CurrencyProvider>
+              <AppRoutes />
+            </CurrencyProvider>
+          </IconProvider>
         </AdminAuthProvider>
     </Router>
   );

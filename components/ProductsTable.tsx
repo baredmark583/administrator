@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AdminPanelProduct } from '../services/adminApiService';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface ProductsTableProps {
     products: AdminPanelProduct[];
@@ -21,6 +22,7 @@ const StatusBadge: React.FC<{ status: AdminPanelProduct['status'] }> = ({ status
 };
 
 const ProductsTable: React.FC<ProductsTableProps> = ({ products, onAction, onDelete }) => {
+    const { getFormattedPrice } = useCurrency();
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-base-content">
@@ -44,7 +46,7 @@ const ProductsTable: React.FC<ProductsTableProps> = ({ products, onAction, onDel
                                 </div>
                             </td>
                             <td className="px-6 py-4">{product.sellerName}</td>
-                            <td className="px-6 py-4 font-mono">{product.price.toFixed(2)} USDT</td>
+                            <td className="px-6 py-4 font-mono">{getFormattedPrice(product.price)}</td>
                             <td className="px-6 py-4">
                                 <StatusBadge status={product.status} />
                             </td>

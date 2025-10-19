@@ -1,5 +1,6 @@
 import React from 'react';
 import type { AdminPanelOrder } from '../services/adminApiService';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface OrdersTableProps {
     orders: AdminPanelOrder[];
@@ -27,6 +28,7 @@ const StatusBadge: React.FC<{ status: AdminPanelOrder['status'] }> = ({ status }
 };
 
 const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewDetails }) => {
+    const { getFormattedPrice } = useCurrency();
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-base-content">
@@ -46,7 +48,7 @@ const OrdersTable: React.FC<OrdersTableProps> = ({ orders, onViewDetails }) => {
                             <td className="px-6 py-4 font-mono text-white whitespace-nowrap">{order.id.slice(0, 8)}...</td>
                             <td className="px-6 py-4 font-medium text-white">{order.customerName}</td>
                             <td className="px-6 py-4">{order.date}</td>
-                            <td className="px-6 py-4 font-mono">{order.total.toFixed(2)} USDT</td>
+                            <td className="px-6 py-4 font-mono">{getFormattedPrice(order.total)}</td>
                             <td className="px-6 py-4">
                                 <StatusBadge status={order.status} />
                             </td>

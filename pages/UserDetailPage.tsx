@@ -4,13 +4,14 @@ import { backendApiService } from '../services/backendApiService';
 import type { AdminPanelUserDetails, AdminPanelProduct, AdminPanelOrder, AdminPanelDispute, AdminPanelUser } from '../services/adminApiService';
 import EditUserModal from '../components/EditUserModal';
 import Spinner from '../components/Spinner';
+import { useCurrency } from '../hooks/useCurrency';
 
-const StatCard: React.FC<{ title: string; value: string | number; icon: string }> = ({ title, value, icon }) => (
+const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: string }> = ({ title, value, icon }) => (
     <div className="bg-base-200 p-4 rounded-lg flex items-center gap-4">
         <div className="text-3xl">{icon}</div>
         <div>
             <p className="text-sm text-base-content/70">{title}</p>
-            <p className="text-xl font-bold text-white">{value}</p>
+            <div className="text-xl font-bold text-white">{value}</div>
         </div>
     </div>
 );
@@ -68,6 +69,7 @@ const UserDetailPage: React.FC = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [activeTab, setActiveTab] = useState<UserDetailTab>('products');
     const [isSavingRole, setIsSavingRole] = useState(false);
+    const { getFormattedPrice } = useCurrency();
 
     useEffect(() => {
         if (id) {
@@ -179,10 +181,10 @@ const UserDetailPage: React.FC = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <StatCard title="Баланс" value={`${user.balance.toFixed(2)} USDT`} icon="💰" />
-                    <StatCard title="Всего продано (GMV)" value={`${user.financials.gmv.toFixed(2)} USDT`} icon="📈" />
-                    <StatCard title="Всего куплено" value={`${user.financials.totalSpent.toFixed(2)} USDT`} icon="🛒" />
-                    <StatCard title="Комиссия платформе" value={`${user.financials.platformCommission.toFixed(2)} USDT`} icon="🏦" />
+                    <StatCard title="Баланс" value={getFormattedPrice(user.balance)} icon="💰" />
+                    <StatCard title="Всего продано (GMV)" value={getFormattedPrice(user.financials.gmv)} icon="📈" />
+                    <StatCard title="Всего куплено" value={getFormattedPrice(user.financials.totalSpent)} icon="🛒" />
+                    <StatCard title="Комиссия платформе" value={getFormattedPrice(user.financials.platformCommission)} icon="🏦" />
                 </div>
                 <TelegramMessageSender userId={user.id} userName={user.name} />
             </div>
@@ -202,28 +204,30 @@ const UserDetailPage: React.FC = () => {
     );
 };
 
-const SimpleProductsTable: React.FC<{products: AdminPanelProduct[]}> = ({products}) => (
-    <div className="overflow-x-auto"><table className="w-full text-sm">
+const SimpleProductsTable: React.FC<{products: AdminPanelProduct[]}> = ({products}) => {
+    const { getFormattedPrice } = useCurrency();
+    return (<div className="overflow-x-auto"><table className="w-full text-sm">
         <thead className="text-xs text-base-content/70 uppercase"><tr><th className="px-4 py-2">Товар</th><th className="px-4 py-2">Цена</th><th className="px-4 py-2">Статус</th></tr></thead>
         <tbody>{products.map(p => <tr key={p.id} className="border-b border-base-300/50">
             <td className="px-4 py-2 text-white font-medium">{p.title}</td>
-            <td className="px-4 py-2 font-mono">{p.price.toFixed(2)}</td>
+            <td className="px-4 py-2 font-mono">{getFormattedPrice(p.price)}</td>
             <td className="px-4 py-2">{p.status}</td>
         </tr>)}</tbody>
     </table></div>
-);
+)};
 
-const SimpleOrdersTable: React.FC<{orders: AdminPanelOrder[], type: 'sales' | 'purchases'}> = ({orders, type}) => (
-     <div className="overflow-x-auto"><table className="w-full text-sm">
+const SimpleOrdersTable: React.FC<{orders: AdminPanelOrder[], type: 'sales' | 'purchases'}> = ({orders, type}) => {
+    const { getFormattedPrice } = useCurrency();
+    return (<div className="overflow-x-auto"><table className="w-full text-sm">
         <thead className="text-xs text-base-content/70 uppercase"><tr><th className="px-4 py-2">ID</th><th className="px-4 py-2">{type === 'sales' ? 'Покупатель' : 'Продавец'}</th><th className="px-4 py-2">Сумма</th><th className="px-4 py-2">Статус</th></tr></thead>
         <tbody>{orders.map(o => <tr key={o.id} className="border-b border-base-300/50">
             <td className="px-4 py-2 font-mono text-white/70">{o.id.slice(0,8)}...</td>
             <td className="px-4 py-2 text-white">{type === 'sales' ? o.buyer.name : o.seller.name}</td>
-            <td className="px-4 py-2 font-mono">{o.total.toFixed(2)}</td>
+            <td className="px-4 py-2 font-mono">{getFormattedPrice(o.total)}</td>
             <td className="px-4 py-2">{o.status}</td>
         </tr>)}</tbody>
     </table></div>
-);
+)};
 
 const SimpleDisputesTable: React.FC<{disputes: AdminPanelDispute[]}> = ({disputes}) => (
      <div className="overflow-x-auto"><table className="w-full text-sm">

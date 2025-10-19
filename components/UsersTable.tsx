@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { AdminPanelUser } from '../services/adminApiService';
+import { useCurrency } from '../hooks/useCurrency';
 
 const RoleBadge: React.FC<{ role: AdminPanelUser['role'] }> = ({ role }) => {
     const roleMap = {
@@ -19,6 +20,7 @@ interface UsersTableProps {
 
 const UsersTable: React.FC<UsersTableProps> = ({ users }) => {
     const navigate = useNavigate();
+    const { getFormattedPrice } = useCurrency();
 
     const handleRowClick = (userId: string) => {
         navigate(`/users/${userId}`);
@@ -69,7 +71,7 @@ const UsersTable: React.FC<UsersTableProps> = ({ users }) => {
                             <td className="px-6 py-4">
                                 <RoleBadge role={user.role} />
                             </td>
-                            <td className="px-6 py-4 font-mono">{user.balance.toFixed(2)} USDT</td>
+                            <td className="px-6 py-4 font-mono">{getFormattedPrice(user.balance)}</td>
                             <td className="px-6 py-4 text-right">
                                 <span className="font-medium text-sky-400">Детали &rarr;</span>
                             </td>

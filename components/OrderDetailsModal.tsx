@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { AdminPanelOrder } from '../services/adminApiService';
+import { useCurrency } from '../hooks/useCurrency';
 
 interface OrderDetailsModalProps {
     order: AdminPanelOrder;
@@ -10,6 +11,7 @@ interface OrderDetailsModalProps {
 const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, onSave }) => {
     const [currentStatus, setCurrentStatus] = useState(order.status);
     const [isSaving, setIsSaving] = useState(false);
+    const { getFormattedPrice } = useCurrency();
 
     const handleSave = async () => {
         setIsSaving(true);
@@ -71,14 +73,14 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({ order, onClose, o
                                     <img src={item.imageUrl} alt={item.title} className="w-16 h-16 rounded-md object-cover" />
                                     <div className="flex-grow">
                                         <p className="font-semibold text-white">{item.title}</p>
-                                        <p className="text-sm text-base-content/70">{item.quantity} шт. &times; {item.price.toFixed(2)} USDT</p>
+                                        <p className="text-sm text-base-content/70">{item.quantity} шт. &times; {getFormattedPrice(item.price)}</p>
                                     </div>
-                                    <p className="font-mono font-semibold text-white text-lg">{(item.quantity * item.price).toFixed(2)}</p>
+                                    <p className="font-mono font-semibold text-white text-lg">{getFormattedPrice(item.quantity * item.price)}</p>
                                 </div>
                             ))}
                             <div className="p-3 flex justify-between items-center font-bold text-xl">
                                 <span>Итого:</span>
-                                <span className="text-primary">{order.total.toFixed(2)} USDT</span>
+                                <span className="text-primary">{getFormattedPrice(order.total)}</span>
                             </div>
                         </div>
                     </div>
