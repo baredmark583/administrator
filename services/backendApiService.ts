@@ -1,5 +1,20 @@
 // This service handles all communication with the backend API for the admin panel.
-import type { User as AppUser, Product as AppProduct, Order as AppOrder, Dispute as AppDispute, Icon as AppIcon, Proposal as AppProposal, LiveStream } from '../types';
+import type {
+    User as AppUser,
+    Product as AppProduct,
+    Order as AppOrder,
+    Dispute as AppDispute,
+    Icon as AppIcon,
+    Proposal as AppProposal,
+    LiveStream,
+    WorkshopPost,
+    DisputePriority,
+    DisputeTier,
+    DisputeAutoAction,
+    DisputeAutomationLogEntry,
+    DisputeResolutionTemplate,
+    DisputeInternalNote,
+} from '../types';
 import type { CategorySchema } from '../constants';
 
 // --- TYPES ---
@@ -10,6 +25,17 @@ import type { CategorySchema } from '../constants';
 export interface Setting {
     key: string;
     value: string;
+    updatedAt?: string;
+    updatedBy?: string;
+}
+
+export interface SettingAuditEntry {
+    id: string;
+    key: string;
+    oldValue?: string;
+    newValue: string;
+    updatedBy?: string;
+    createdAt: string;
 }
 
 export interface SalesChartDataPoint {
@@ -77,7 +103,52 @@ export interface AdminPanelProduct {
     description: string;
     dynamicAttributes: Record<string, string | number>;
     rejectionReason?: string;
+    appealMessage?: string;
+    moderatedAt?: string;
 }
+
+export interface ProductModerationEvent {
+    id: string;
+    action: 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'APPEALED' | 'REOPENED';
+    comment?: string;
+    moderator?: Pick<AdminPanelUser, 'id' | 'name' | 'avatarUrl'>;
+    previousStatus?: AdminPanelProduct['status'];
+    nextStatus?: AdminPanelProduct['status'];
+    createdAt: string;
+}
+
+const mapProductToAdminView = (product: AppProduct): AdminPanelProduct => ({
+    id: product.id,
+    title: product.title,
+    imageUrls: product.imageUrls,
+    sellerName: product.seller?.name || 'N/A',
+    category: product.category,
+    price: product.price || 0,
+    status: (product.status as AdminPanelProduct['status']) || 'Pending Moderation',
+    dateAdded: new Date(product.createdAt).toLocaleDateString(),
+    description: product.description,
+    dynamicAttributes: product.dynamicAttributes,
+    rejectionReason: product.rejectionReason,
+    appealMessage: product.appealMessage,
+    moderatedAt: product.moderatedAt ? new Date(product.moderatedAt).toLocaleString() : undefined,
+});
+
+const mapGlobalPromoCode = (promo: any): AdminGlobalPromoCode => ({
+    id: promo.id,
+    code: promo.code,
+    discountType: promo.discountType,
+    discountValue: Number(promo.discountValue || 0),
+    isActive: Boolean(promo.isActive),
+    uses: promo.uses ?? 0,
+    maxUses: promo.maxUses ?? undefined,
+    minPurchaseAmount: promo.minPurchaseAmount ?? undefined,
+    validFrom: promo.validFrom ?? null,
+    validUntil: promo.validUntil ?? null,
+    createdAt: promo.createdAt,
+    updatedAt: promo.updatedAt,
+    createdBy: promo.createdBy ?? null,
+    updatedBy: promo.updatedBy ?? null,
+});
 
 export interface AdminPanelOrder {
     id: string;
@@ -121,7 +192,18 @@ export interface AdminGlobalPromoCode {
     uses: number;
     maxUses?: number;
     minPurchaseAmount?: number;
+    validFrom?: string | null;
+    validUntil?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    createdBy?: string | null;
+    updatedBy?: string | null;
 }
+
+export type AdminGlobalPromoCodeInput = Omit<
+    AdminGlobalPromoCode,
+    'id' | 'uses' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'
+>;
 
 
 export interface DisputeMessage {
@@ -131,12 +213,15 @@ export interface DisputeMessage {
     senderAvatar: string;
     timestamp: number;
     text?: string;
+    imageUrl?: string;
 }
 
 export interface AdminPanelDispute {
     id: string; // Order ID
     createdAt: string;
     status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED_BUYER' | 'RESOLVED_SELLER';
+    priority: DisputePriority;
+    assignedTier: DisputeTier;
     order: {
         id: string;
         customerName: string;
@@ -148,6 +233,13 @@ export interface AdminPanelDispute {
         }[];
     };
     messages: DisputeMessage[];
+    responseSlaDueAt?: string;
+    pendingAutoAction?: DisputeAutoAction;
+    pendingAutoActionAt?: string;
+    automationLog?: DisputeAutomationLogEntry[];
+    resolutionTemplates?: DisputeResolutionTemplate[];
+    internalNotes?: DisputeInternalNote[];
+    slaBreachCount?: number;
 }
 
 export interface AdminPanelDisputeDetails extends AdminPanelDispute {
@@ -156,6 +248,17 @@ export interface AdminPanelDisputeDetails extends AdminPanelDispute {
     fullOrder: AdminPanelOrder;
     buyerStats: { totalOrders: number; disputeRate: number; };
     sellerStats: { totalSales: number; disputeRate: number; };
+}
+
+export interface DisputesReport {
+    total: number;
+    open: number;
+    resolvedBuyer: number;
+    resolvedSeller: number;
+    averageResolutionHours: number;
+    slaBreaches: number;
+    priorityBreakdown: Record<DisputePriority, number>;
+    autoActionsExecuted: number;
 }
 
 export type AdminIcon = AppIcon;
@@ -179,18 +282,14 @@ const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://local
 
 const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     try {
-        const token = localStorage.getItem('adminToken');
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
             ...options.headers,
         };
 
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
+            credentials: 'include',
             headers,
         });
 
@@ -209,11 +308,62 @@ const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     }
 };
 
+const mapBackendDispute = (dispute: AppDispute): AdminPanelDispute => {
+    const orderTotal =
+        (dispute.order as any)?.total ??
+        dispute.order.items.reduce((sum, item) => sum + (item.price || 0), 0);
+    return {
+        id: dispute.id,
+        createdAt: new Date(dispute.createdAt).toLocaleDateString(),
+        status: dispute.status,
+        priority: dispute.priority ?? 'NORMAL',
+        assignedTier: dispute.assignedTier ?? 'LEVEL1',
+        order: {
+            id: dispute.order.id,
+            customerName: dispute.order.buyer?.name ?? '—',
+            sellerName: dispute.order.seller?.name ?? '—',
+            total: orderTotal,
+            items: dispute.order.items.map((item) => ({
+                title: item.product.title,
+                imageUrl: item.product.imageUrls?.[0],
+            })),
+        },
+        messages: dispute.messages,
+        responseSlaDueAt: dispute.responseSlaDueAt,
+        pendingAutoAction: dispute.pendingAutoAction,
+        pendingAutoActionAt: dispute.pendingAutoActionAt,
+        automationLog: dispute.automationLog,
+        resolutionTemplates: dispute.resolutionTemplates,
+        internalNotes: dispute.internalNotes,
+        slaBreachCount: dispute.slaBreachCount,
+    };
+};
+
 export const backendApiService = {
-    login: async (email: string, password: string): Promise<{ access_token: string; user: { email: string, role: string } }> => {
+    login: async (email: string, password: string): Promise<{ user: { email: string, role: string } }> => {
         return apiFetch('/auth/admin/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
+        });
+    },
+
+    getFlaggedWorkshopPosts: async (limit = 20, offset = 0): Promise<{ items: WorkshopPost[]; total: number }> => {
+        const query = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+        const [items, total] = await apiFetch(`/workshop/moderation/posts?${query.toString()}`);
+        return { items, total };
+    },
+
+    moderateWorkshopPost: async (postId: string, action: 'APPROVE' | 'HIDE' | 'DELETE' | 'LOCK_COMMENTS' | 'UNLOCK_COMMENTS', notes?: string): Promise<void> => {
+        await apiFetch(`/workshop/posts/${postId}/moderate`, {
+            method: 'PATCH',
+            body: JSON.stringify({ action, notes }),
+        });
+    },
+
+    moderateWorkshopComment: async (commentId: string, action: 'APPROVE' | 'HIDE' | 'DELETE', notes?: string): Promise<void> => {
+        await apiFetch(`/workshop/comments/${commentId}/moderate`, {
+            method: 'PATCH',
+            body: JSON.stringify({ action, notes }),
         });
     },
 
@@ -321,19 +471,7 @@ export const backendApiService = {
     // PRODUCTS
     getProducts: async (): Promise<AdminPanelProduct[]> => {
         const products: AppProduct[] = await apiFetch('/products');
-        return products.map(p => ({
-            id: p.id,
-            title: p.title,
-            imageUrls: p.imageUrls,
-            sellerName: p.seller?.name || 'N/A',
-            category: p.category,
-            price: p.price || 0,
-            status: p.status,
-            dateAdded: new Date(p.createdAt).toLocaleDateString(),
-            description: p.description,
-            dynamicAttributes: p.dynamicAttributes,
-            rejectionReason: p.rejectionReason,
-        }));
+        return products.map(mapProductToAdminView);
     },
     
     updateProduct: async(productId: string, updates: Partial<AdminPanelProduct>): Promise<AdminPanelProduct> => {
@@ -341,19 +479,42 @@ export const backendApiService = {
             method: 'PATCH',
             body: JSON.stringify(updates),
         });
-        return {
-            id: updatedProduct.id,
-            title: updatedProduct.title,
-            imageUrls: updatedProduct.imageUrls,
-            sellerName: updatedProduct.seller?.name || 'N/A',
-            category: updatedProduct.category,
-            price: updatedProduct.price || 0,
-            status: updatedProduct.status,
-            dateAdded: new Date(updatedProduct.createdAt).toLocaleDateString(),
-            description: updatedProduct.description,
-            dynamicAttributes: updatedProduct.dynamicAttributes,
-            rejectionReason: updatedProduct.rejectionReason,
-        };
+        return mapProductToAdminView(updatedProduct);
+    },
+
+    approveProduct: async (productId: string, payload: { note?: string } = {}): Promise<AdminPanelProduct> => {
+        const updatedProduct: AppProduct = await apiFetch(`/products/${productId}/moderation/approve`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+        return mapProductToAdminView(updatedProduct);
+    },
+
+    rejectProduct: async (productId: string, payload: { reason: string; note?: string }): Promise<AdminPanelProduct> => {
+        const updatedProduct: AppProduct = await apiFetch(`/products/${productId}/moderation/reject`, {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+        return mapProductToAdminView(updatedProduct);
+    },
+
+    getProductModerationEvents: async (productId: string): Promise<ProductModerationEvent[]> => {
+        const events = await apiFetch(`/products/${productId}/moderation/events`);
+        return events.map((event: any) => ({
+            id: event.id,
+            action: event.action,
+            comment: event.comment,
+            previousStatus: event.previousStatus,
+            nextStatus: event.nextStatus,
+            createdAt: new Date(event.createdAt).toLocaleString(),
+            moderator: event.moderator
+                ? {
+                    id: event.moderator.id,
+                    name: event.moderator.name,
+                    avatarUrl: event.moderator.avatarUrl,
+                }
+                : undefined,
+        }));
     },
     
     deleteProduct: async (productId: string): Promise<void> => {
@@ -390,6 +551,20 @@ export const backendApiService = {
         });
     },
     
+    syncCategoriesFromBlueprint: async(categories: CategorySchema[]): Promise<void> => {
+        await apiFetch('/categories/batch-create', {
+            method: 'POST',
+            body: JSON.stringify({ categories }),
+        });
+    },
+
+    replaceCategorySubtree: async(parentId: string, categories: CategorySchema[]): Promise<void> => {
+        await apiFetch(`/categories/${parentId}/import-subtree`, {
+            method: 'POST',
+            body: JSON.stringify({ categories }),
+        });
+    },
+    
     // ICONS
     getIcons: async (): Promise<AdminIcon[]> => {
         return apiFetch('/icons');
@@ -399,6 +574,13 @@ export const backendApiService = {
         return apiFetch('/icons/upsert', {
             method: 'PATCH',
             body: JSON.stringify(icon),
+        });
+    },
+
+    syncMissingIcons: async(icons: Array<Partial<Omit<AdminIcon, 'id'>> & { iconUrl?: string }>): Promise<{ created: number }> => {
+        return apiFetch('/icons/sync-missing', {
+            method: 'PATCH',
+            body: JSON.stringify({ icons }),
         });
     },
 
@@ -441,58 +623,114 @@ export const backendApiService = {
 
     getDisputes: async (): Promise<AdminPanelDispute[]> => {
         const disputes: AppDispute[] = await apiFetch('/disputes');
-        return disputes.map(d => ({
-            id: d.id,
-            // FIX: Use 'createdAt' from the dispute object, which is now available on the AppDispute type.
-            createdAt: new Date(d.createdAt).toLocaleDateString(),
-            status: d.status,
-            order: {
-                id: d.order.id,
-                customerName: d.order.buyer.name,
-                sellerName: d.order.seller.name,
-                total: d.order.total,
-                items: d.order.items.map(i => ({ title: i.product.title, imageUrl: i.product.imageUrls[0] })),
-            },
-            messages: d.messages,
-        }));
+        return disputes.map(mapBackendDispute);
     },
 
-    // The other methods need full implementations...
     getDisputeDetails: async(disputeId: string): Promise<AdminPanelDisputeDetails> => {
-        // This would be a new backend endpoint
-        const dispute = (await backendApiService.getDisputes()).find(d => d.id === disputeId);
-        const order = (await backendApiService.getOrders()).find(o => o.id === disputeId);
-        const users = await backendApiService.getUsers();
-        const buyer = users.find(u => u.name === order.customerName);
-        const seller = users.find(u => u.name === order.sellerName);
-        return {
-            ...dispute,
+        const dispute: AppDispute = await apiFetch(`/disputes/${disputeId}`);
+        const mapped = mapBackendDispute(dispute);
+        const buyer: AdminPanelUser = {
+            id: dispute.order.buyer.id,
+            name: dispute.order.buyer.name,
+            email: dispute.order.buyer.email || 'unknown@cryptocraft.app',
+            avatarUrl: dispute.order.buyer.avatarUrl || 'https://picsum.photos/seed/buyer/100/100',
+            registrationDate: dispute.order.buyer.createdAt
+                ? new Date(dispute.order.buyer.createdAt).toLocaleDateString()
+                : '-',
+            status: 'Standard',
+            balance: dispute.order.buyer.balance ?? 0,
+            isBlocked: false,
+            role: dispute.order.buyer.role || 'USER',
+        };
+        const seller: AdminPanelUser = {
+            id: dispute.order.seller.id,
+            name: dispute.order.seller.name,
+            email: dispute.order.seller.email || 'unknown@cryptocraft.app',
+            avatarUrl: dispute.order.seller.avatarUrl || 'https://picsum.photos/seed/seller/100/100',
+            registrationDate: dispute.order.seller.createdAt
+                ? new Date(dispute.order.seller.createdAt).toLocaleDateString()
+                : '-',
+            status: 'Standard',
+            balance: dispute.order.seller.balance ?? 0,
+            isBlocked: false,
+            role: dispute.order.seller.role || 'USER',
+        };
+        const fullOrder: AdminPanelOrder = {
+            id: dispute.order.id,
+            customerName: dispute.order.buyer.name,
+            date: new Date(dispute.order.createdAt).toLocaleDateString(),
+            total: mapped.order.total,
+            status: dispute.order.status,
+            customerInfo: {
+                name: dispute.order.buyer.name,
+                email: dispute.order.buyer.email || 'unknown@cryptocraft.app',
+                shippingAddress: `${dispute.order.shippingAddress?.city ?? ''} ${dispute.order.shippingAddress?.postOffice ?? ''}`.trim(),
+            },
+            sellerName: dispute.order.seller.name,
+            items: dispute.order.items.map(item => ({
+                productId: item.product.id,
+                title: item.product.title,
+                imageUrl: item.product.imageUrls?.[0],
+                quantity: item.quantity,
+                price: item.price,
+            })),
             buyer,
             seller,
-            fullOrder: order,
-            buyerStats: { totalOrders: 1, disputeRate: 100 },
-            sellerStats: { totalSales: 1, disputeRate: 100 },
-        } as AdminPanelDisputeDetails
+            paymentMethod: dispute.order.paymentMethod ?? 'ESCROW',
+            checkoutMode: dispute.order.checkoutMode ?? 'CART',
+        };
+        return {
+            ...mapped,
+            buyer,
+            seller,
+            fullOrder,
+            buyerStats: { totalOrders: 1, disputeRate: 0 },
+            sellerStats: { totalSales: 1, disputeRate: 0 },
+        };
     },
     updateDispute: async(dispute: AdminPanelDispute): Promise<AdminPanelDispute> => {
         return apiFetch(`/disputes/${dispute.id}`, {
             method: 'PATCH',
-            body: JSON.stringify({ status: dispute.status, messages: dispute.messages }),
+            body: JSON.stringify({
+                status: dispute.status,
+                messages: dispute.messages,
+                priority: dispute.priority,
+                assignedTier: dispute.assignedTier,
+                responseSlaDueAt: dispute.responseSlaDueAt,
+                pendingAutoAction: dispute.pendingAutoAction,
+                pendingAutoActionAt: dispute.pendingAutoActionAt,
+                resolutionTemplates: dispute.resolutionTemplates,
+                internalNotes: dispute.internalNotes,
+            }),
         });
+    },
+    getDisputesReport: async (): Promise<DisputesReport> => {
+        return apiFetch('/disputes/report');
     },
 
     getTransactions: async(): Promise<AdminTransaction[]> => {
         return apiFetch('/transactions');
     },
     getGlobalPromoCodes: async(): Promise<AdminGlobalPromoCode[]> => {
-        // Mocked as backend doesn't have this yet.
-        return Promise.resolve([]);
+        const promos = await apiFetch('/global-promocodes');
+        return promos.map(mapGlobalPromoCode);
     },
-    createGlobalPromoCode: async(data: Omit<AdminGlobalPromoCode, 'id' | 'uses'>): Promise<AdminGlobalPromoCode> => {
-        return Promise.resolve({ ...data, id: 'promo-global-1', uses: 0 });
+    createGlobalPromoCode: async(data: AdminGlobalPromoCodeInput): Promise<AdminGlobalPromoCode> => {
+        const created = await apiFetch('/global-promocodes', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+        return mapGlobalPromoCode(created);
+    },
+    updateGlobalPromoCode: async(id: string, data: Partial<AdminGlobalPromoCodeInput>): Promise<AdminGlobalPromoCode> => {
+        const updated = await apiFetch(`/global-promocodes/${id}`, {
+            method: 'PATCH',
+            body: JSON.stringify(data),
+        });
+        return mapGlobalPromoCode(updated);
     },
     deleteGlobalPromoCode: async(id: string): Promise<void> => {
-        return Promise.resolve();
+        await apiFetch(`/global-promocodes/${id}`, { method: 'DELETE' });
     },
 
     // GOVERNANCE
@@ -548,14 +786,39 @@ export const backendApiService = {
 
     // SETTINGS
     getSettings: async (): Promise<Setting[]> => {
-        return apiFetch('/settings');
+        const settings = await apiFetch('/settings');
+        return settings.map((item: any) => ({
+            key: item.key,
+            value: item.value,
+            updatedAt: item.updatedAt,
+            updatedBy: item.updatedBy,
+        }));
     },
 
     updateSettings: async(settings: Setting[]): Promise<Setting[]> => {
-        return apiFetch('/settings', {
+        const payload = settings.map(setting => ({ key: setting.key, value: setting.value }));
+        const updated = await apiFetch('/settings', {
             method: 'PATCH',
-            body: JSON.stringify(settings),
+            body: JSON.stringify(payload),
         });
+        return updated.map((item: any) => ({
+            key: item.key,
+            value: item.value,
+            updatedAt: item.updatedAt,
+            updatedBy: item.updatedBy,
+        }));
+    },
+
+    getSettingsAudit: async(limit = 50): Promise<SettingAuditEntry[]> => {
+        const audit = await apiFetch(`/settings/audit?limit=${limit}`);
+        return audit.map((entry: any) => ({
+            id: entry.id,
+            key: entry.key,
+            oldValue: entry.oldValue ?? undefined,
+            newValue: entry.newValue,
+            updatedBy: entry.updatedBy ?? undefined,
+            createdAt: entry.createdAt,
+        }));
     },
 
     // LIVESTREAMS

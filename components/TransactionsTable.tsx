@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import type { AdminTransaction } from '../services/adminApiService';
 import { useCurrency } from '../hooks/useCurrency';
 
@@ -8,12 +8,13 @@ interface TransactionsTableProps {
 
 const TypeBadge: React.FC<{ type: AdminTransaction['type'] }> = ({ type }) => {
     const typeMap = {
-        'Sale': { text: 'Продажа', style: 'bg-green-500/20 text-green-300' },
-        'Withdrawal': { text: 'Вывод', style: 'bg-red-500/20 text-red-300' },
-        'Deposit': { text: 'Пополнение', style: 'bg-sky-500/20 text-sky-300' },
-        'Commission': { text: 'Комиссия', style: 'bg-purple-500/20 text-purple-300' },
-        'Refund': { text: 'Возврат', style: 'bg-yellow-500/20 text-yellow-300' },
-    };
+        Sale: { text: 'Продажа', style: 'bg-green-500/20 text-green-300' },
+        Withdrawal: { text: 'Вывод', style: 'bg-red-500/20 text-red-300' },
+        Deposit: { text: 'Пополнение', style: 'bg-sky-500/20 text-sky-300' },
+        Commission: { text: 'Комиссия', style: 'bg-purple-500/20 text-purple-300' },
+        Refund: { text: 'Возврат', style: 'bg-yellow-500/20 text-yellow-300' },
+        'Escrow Hold': { text: 'Эскроу', style: 'bg-amber-500/20 text-amber-300' },
+    } as const;
     const { text, style } = typeMap[type];
     return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${style}`}>{text}</span>;
 };

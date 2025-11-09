@@ -1,5 +1,58 @@
 // This file contains the core type definitions for the CryptoCraft application.
 
+export interface AiUsageMeta {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  cachedTokens?: number;
+}
+
+export interface AiResponseMeta {
+  provider: string;
+  scenario: 'text' | 'vision' | 'image-edit';
+  latencyMs: number;
+  usage?: AiUsageMeta;
+  warnings?: string[];
+}
+
+export interface AiResponse<T> {
+  data: T;
+  meta: AiResponseMeta;
+}
+
+export type EscrowStatus =
+  | 'AWAITING_PAYMENT'
+  | 'PENDING_CONFIRMATION'
+  | 'FUNDED'
+  | 'RELEASED'
+  | 'REFUNDED'
+  | 'PARTIALLY_REFUNDED'
+  | 'CANCELLED'
+  | 'DISPUTED';
+
+export interface EscrowEvent {
+  id: string;
+  type: 'STATUS_CHANGE' | 'PAYMENT_DETECTED' | 'WEBHOOK' | 'MANUAL_ACTION' | 'NOTE';
+  description?: string;
+  payload?: Record<string, any>;
+  performedByUserId?: string;
+  performedByRole?: 'USER' | 'SELLER' | 'ADMIN' | 'SYSTEM';
+  createdAt: string;
+}
+
+export interface EscrowTransaction {
+  id: string;
+  status: EscrowStatus;
+  amount: number;
+  currency: 'USDT';
+  network: 'TON';
+  escrowType: 'CART' | 'DEPOSIT';
+  depositTransactionHash?: string;
+  releaseTransactionHash?: string;
+  refundTransactionHash?: string;
+  metadata?: Record<string, any>;
+  events?: EscrowEvent[];
+}
 export interface User {
   id: string;
   telegramId?: number;
@@ -100,14 +153,37 @@ export interface Product {
   createdAt?: string;
 }
 
+export interface ReviewMediaAttachment {
+  id?: string;
+  type: 'image' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  name?: string;
+  mimeType?: string;
+  size?: number;
+}
+
+export interface ReviewBehaviorSignal {
+  code: string;
+  weight: number;
+  detail?: string;
+  triggeredAt: string;
+}
+
 export interface Review {
   id: string;
   productId: string;
   author: User;
   rating: number;
-  text: string;
-  timestamp: number;
+  text?: string;
+  timestamp?: number | string;
+  createdAt?: string;
+  attachments?: ReviewMediaAttachment[];
   imageUrl?: string;
+  fraudScore?: number;
+  behaviorSignals?: ReviewBehaviorSignal[];
+  moderationFlags?: string[];
+  isHidden?: boolean;
 }
 
 export interface MessageContent {
@@ -177,8 +253,8 @@ export interface Order {
   total: number;
   status: OrderStatus;
   orderDate: number;
-  shippingAddress: ShippingAddress;
-  shippingMethod: 'NOVA_POSHTA' | 'UKRPOSHTA';
+  shippingAddress?: ShippingAddress;
+  shippingMethod: 'NOVA_POSHTA' | 'UKRPOSHTA' | 'MEETUP';
   paymentMethod: 'ESCROW' | 'DIRECT';
   trackingNumber?: string;
   smartContractAddress?: string;
@@ -186,6 +262,14 @@ export interface Order {
   disputeId?: string;
   authenticationRequested?: boolean;
   authenticationEvents?: AuthenticationEvent[];
+  checkoutMode?: 'CART' | 'DEPOSIT';
+  depositAmount?: number;
+  meetingDetails?: {
+    scheduledAt?: string;
+    location?: string;
+    notes?: string;
+  };
+  escrow?: EscrowTransaction;
 }
 
 export interface Notification {
@@ -210,6 +294,8 @@ export interface WorkshopComment {
     author: User;
     text: string;
     timestamp: number;
+    status?: 'VISIBLE' | 'HIDDEN';
+    reportCount?: number;
 }
 export interface WorkshopPost {
     id: string;
@@ -219,6 +305,9 @@ export interface WorkshopPost {
     timestamp: number;
     likedBy: string[];
     comments: WorkshopComment[];
+    status?: 'PUBLISHED' | 'FLAGGED' | 'HIDDEN';
+    reportCount?: number;
+    commentsLocked?: boolean;
 }
 
 export interface FeedItem {
@@ -232,6 +321,7 @@ export interface ForumPost {
     author: User;
     content: string;
     createdAt: number;
+    isHidden?: boolean;
 }
 export interface ForumThread {
     id: string;
@@ -241,6 +331,9 @@ export interface ForumThread {
     replyCount: number;
     lastReplyAt: number;
     isPinned?: boolean;
+    status?: 'OPEN' | 'LOCKED';
+    tags?: string[];
+    viewCount?: number;
 }
 
 export interface TimeSeriesDataPoint {
@@ -322,12 +415,46 @@ export interface DisputeMessage {
     imageUrl?: string;
 }
 
+export type DisputePriority = 'LOW' | 'NORMAL' | 'URGENT';
+export type DisputeTier = 'LEVEL1' | 'LEVEL2' | 'SUPERVISOR';
+export type DisputeAutoAction = 'NONE' | 'AUTO_RELEASE' | 'AUTO_REFUND' | 'AUTO_ESCALATE';
+
+export interface DisputeResolutionTemplate {
+    id: string;
+    title: string;
+    body: string;
+    action: 'REFUND_BUYER' | 'RELEASE_FUNDS' | 'PARTIAL_REFUND';
+}
+
+export interface DisputeAutomationLogEntry {
+    id: string;
+    type: 'SLA_BREACH' | 'AUTO_RELEASE' | 'AUTO_REFUND' | 'AUTO_ESCALATE';
+    message: string;
+    createdAt: string;
+}
+
+export interface DisputeInternalNote {
+    id: string;
+    authorId: string;
+    authorName: string;
+    note: string;
+    createdAt: string;
+}
+
 export interface Dispute {
     id: string; // Same as orderId
     order: Order;
     messages: DisputeMessage[];
     status: 'OPEN' | 'UNDER_REVIEW' | 'RESOLVED_BUYER' | 'RESOLVED_SELLER';
-    // FIX: Add createdAt to match backend entity for admin panel compatibility.
+    priority?: DisputePriority;
+    assignedTier?: DisputeTier;
+    responseSlaDueAt?: string;
+    pendingAutoAction?: DisputeAutoAction;
+    pendingAutoActionAt?: string;
+    automationLog?: DisputeAutomationLogEntry[];
+    resolutionTemplates?: DisputeResolutionTemplate[];
+    internalNotes?: DisputeInternalNote[];
+    slaBreachCount?: number;
     createdAt?: number;
 }
 
@@ -344,6 +471,10 @@ export interface LiveStream {
     likes?: number;
     viewerCount?: number;
     isPromoted?: boolean;
+    peakViewers?: number;
+    totalViewerMinutes?: number;
+    recordingUrl?: string;
+    abuseStrikes?: number;
 }
 
 export interface TrackingEvent {

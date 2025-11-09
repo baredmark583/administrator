@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import type { AdminGlobalPromoCode } from '../services/adminApiService';
+import type { AdminGlobalPromoCodeInput } from '../services/adminApiService';
 
 interface CreatePromoCodeModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (data: Omit<AdminGlobalPromoCode, 'id' | 'uses'>) => Promise<void>;
+    onSubmit: (data: AdminGlobalPromoCodeInput) => Promise<void>;
 }
 
 const CreatePromoCodeModal: React.FC<CreatePromoCodeModalProps> = ({ isOpen, onClose, onSubmit }) => {
@@ -13,6 +13,8 @@ const CreatePromoCodeModal: React.FC<CreatePromoCodeModalProps> = ({ isOpen, onC
     const [discountValue, setDiscountValue] = useState<number | ''>('');
     const [maxUses, setMaxUses] = useState<number | ''>('');
     const [minPurchaseAmount, setMinPurchaseAmount] = useState<number | ''>('');
+    const [validFrom, setValidFrom] = useState('');
+    const [validUntil, setValidUntil] = useState('');
     const [isActive, setIsActive] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -32,9 +34,19 @@ const CreatePromoCodeModal: React.FC<CreatePromoCodeModalProps> = ({ isOpen, onC
             isActive,
             maxUses: maxUses ? Number(maxUses) : undefined,
             minPurchaseAmount: minPurchaseAmount ? Number(minPurchaseAmount) : undefined,
+            validFrom: validFrom ? new Date(validFrom).toISOString() : undefined,
+            validUntil: validUntil ? new Date(validUntil).toISOString() : undefined,
         };
         await onSubmit(promoData);
         setIsSaving(false);
+        setCode('');
+        setDiscountValue('');
+        setMaxUses('');
+        setMinPurchaseAmount('');
+        setValidFrom('');
+        setValidUntil('');
+        setIsActive(true);
+        onClose();
     };
 
     return (
@@ -81,7 +93,7 @@ const CreatePromoCodeModal: React.FC<CreatePromoCodeModalProps> = ({ isOpen, onC
                                 />
                             </div>
                         </div>
-                         <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4">
                              <div>
                                 <label className="block text-sm font-medium text-base-content/70 mb-1">Лимит использований</label>
                                 <input
@@ -102,6 +114,26 @@ const CreatePromoCodeModal: React.FC<CreatePromoCodeModalProps> = ({ isOpen, onC
                                     className="w-full bg-base-200 border border-base-300 rounded-md p-2"
                                     placeholder="Необязательно"
                                     min="0"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-base-content/70 mb-1">Действует с</label>
+                                <input
+                                    type="datetime-local"
+                                    value={validFrom}
+                                    onChange={(e) => setValidFrom(e.target.value)}
+                                    className="w-full bg-base-200 border border-base-300 rounded-md p-2"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-base-content/70 mb-1">Действует до</label>
+                                <input
+                                    type="datetime-local"
+                                    value={validUntil}
+                                    onChange={(e) => setValidUntil(e.target.value)}
+                                    className="w-full bg-base-200 border border-base-300 rounded-md p-2"
                                 />
                             </div>
                         </div>

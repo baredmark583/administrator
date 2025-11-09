@@ -1,6 +1,30 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { backendApiService } from '../services/backendApiService';
-import type { CategorySchema, CategoryField } from '../constants';
+import { CATEGORIES } from '../constants';
+import type { CategorySchema, CategoryField, CategoryFieldWithMeta } from '../constants';
+
+const getResolvedFields = (category?: CategorySchema | null): CategoryFieldWithMeta[] => {
+    if (!category) return [];
+    if (category.resolvedFields && category.resolvedFields.length > 0) {
+        return category.resolvedFields;
+    }
+    return category.fields || [];
+};
+
+const countCategories = (categories: CategorySchema[] = []): number => {
+    return categories.reduce((acc, category) => {
+        const children = category.subcategories ? countCategories(category.subcategories) : 0;
+        return acc + 1 + children;
+    }, 0);
+};
+
+const countMissingIcons = (categories: CategorySchema[] = []): number => {
+    return categories.reduce((acc, category) => {
+        const missingHere = category.iconUrl ? 0 : 1;
+        const children = category.subcategories ? countMissingIcons(category.subcategories) : 0;
+        return acc + missingHere + children;
+    }, 0);
+};
 
 // --- Components ---
 
@@ -69,6 +93,8 @@ interface CategoryModalProps {
 const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onDataChange, parentName }) => {
     const [editedCategory, setEditedCategory] = useState<CategorySchema>(category);
     const [isSaving, setIsSaving] = useState(false);
+    const resolvedFields = useMemo(() => getResolvedFields(editedCategory), [editedCategory]);
+    const inheritedFields = resolvedFields.filter(field => field.inherited);
     
     const modalTitle = category.id?.startsWith('new_')
         ? (parentName ? `Новая подкатегория для "${parentName}"` : "Новая категория")
@@ -101,10 +127,12 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onData
     const handleSave = async () => {
         setIsSaving(true);
         const isNew = editedCategory.id.startsWith('new_');
+        const payload = { ...editedCategory } as CategorySchema & { resolvedFields?: CategoryFieldWithMeta[] };
+        delete payload.resolvedFields;
         if (isNew) {
-            await backendApiService.createCategory(editedCategory);
+            await backendApiService.createCategory(payload);
         } else {
-            await backendApiService.updateCategory(editedCategory.id, editedCategory);
+            await backendApiService.updateCategory(payload.id, payload);
         }
         onDataChange();
         setIsSaving(false);
@@ -136,6 +164,19 @@ const CategoryModal: React.FC<CategoryModalProps> = ({ category, onClose, onData
                      </div>
                 </div>
                 <div className="p-4 space-y-3 overflow-y-auto">
+                    {inheritedFields.length > 0 && (
+                        <div className="space-y-2">
+                            <h4 className="text-sm font-semibold text-base-content/70">Наследуемые поля</h4>
+                            <ul className="space-y-1 text-xs text-base-content/70">
+                                {inheritedFields.map(field => (
+                                    <li key={`${field.sourceCategoryId}-${field.name}`} className="flex justify-between gap-2">
+                                        <span>{field.label}</span>
+                                        <span className="text-base-content/50">от {field.sourceCategoryName}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                     <h3 className="font-semibold">Поля категории</h3>
                     {editedCategory.fields.map(field => (
                         <FieldEditor key={field.id} field={field} onUpdate={handleFieldUpdate} onRemove={handleRemoveField} />
@@ -168,6 +209,10 @@ const CategoriesPage: React.FC = () => {
     
     const [currentParentId, setCurrentParentId] = useState<string | null>(null);
     const [breadcrumbs, setBreadcrumbs] = useState<Breadcrumb[]>([{ id: null, name: 'Главная' }]);
+    const [isSyncingBlueprint, setIsSyncingBlueprint] = useState(false);
+    const [showImportPanel, setShowImportPanel] = useState(false);
+    const [importJson, setImportJson] = useState('');
+    const [isImportingSubtree, setIsImportingSubtree] = useState(false);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -204,6 +249,25 @@ const CategoriesPage: React.FC = () => {
         return parent?.subcategories || [];
     }, [currentParentId, allCategories]);
 
+    const categoriesCount = useMemo(() => countCategories(allCategories), [allCategories]);
+    const blueprintCount = useMemo(() => countCategories(CATEGORIES), []);
+    const categoriesMissingIcons = useMemo(() => countMissingIcons(allCategories), [allCategories]);
+
+    const importPreview = useMemo<{ data: CategorySchema[]; error: string | null }>(() => {
+        if (!importJson.trim()) {
+            return { data: [], error: null };
+        }
+        try {
+            const parsed = JSON.parse(importJson);
+            const normalized = Array.isArray(parsed) ? parsed : [parsed];
+            return { data: normalized, error: null };
+        } catch (error) {
+            return { data: [], error: (error as Error).message };
+        }
+    }, [importJson]);
+
+    const importPreviewCount = useMemo(() => countCategories(importPreview.data), [importPreview]);
+
     const handleCategoryClick = (category: CategorySchema) => {
         setCurrentParentId(category.id);
         setBreadcrumbs(prev => [...prev, { id: category.id, name: category.name }]);
@@ -219,12 +283,14 @@ const CategoriesPage: React.FC = () => {
     };
     
     const handleCreate = () => {
+        const parentCategory = currentParentId ? findCategoryById(allCategories, currentParentId) : null;
         const newCategory: CategorySchema = {
             id: `new_cat_${Date.now()}`,
             name: 'Новая категория',
             iconUrl: null,
             fields: [],
             parentId: currentParentId,
+            resolvedFields: parentCategory ? getResolvedFields(parentCategory) : [],
         };
         setEditingCategory(newCategory);
     };
@@ -249,6 +315,59 @@ const CategoriesPage: React.FC = () => {
         }
     };
 
+    const handleBlueprintSync = async () => {
+        if (isSyncingBlueprint) return;
+        const confirmation = window.confirm(
+            `Будет перезаписан весь классификатор (${blueprintCount} записей из шаблона). Продолжить?`,
+        );
+        if (!confirmation) return;
+        setIsSyncingBlueprint(true);
+        try {
+            await backendApiService.syncCategoriesFromBlueprint(CATEGORIES);
+            setCurrentParentId(null);
+            setBreadcrumbs([{ id: null, name: 'Главная' }]);
+            setShowImportPanel(false);
+            setImportJson('');
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert('Не удалось синхронизировать классификатор.');
+        } finally {
+            setIsSyncingBlueprint(false);
+        }
+    };
+
+    const handleBulkImport = async () => {
+        if (importPreview.error) {
+            alert('Исправьте JSON перед импортом.');
+            return;
+        }
+        if (importPreview.data.length === 0) {
+            alert('Вставьте хотя бы одну категорию.');
+            return;
+        }
+        const targetLabel = currentParentId ? `подкатегории "${currentParentName}"` : 'весь каталог';
+        const confirmation = window.confirm(`Заменить ${targetLabel} (${importPreviewCount} элементов)?`);
+        if (!confirmation) return;
+
+        setIsImportingSubtree(true);
+        try {
+            if (currentParentId) {
+                await backendApiService.replaceCategorySubtree(currentParentId, importPreview.data);
+            } else {
+                await backendApiService.syncCategoriesFromBlueprint(importPreview.data);
+            }
+            setImportJson('');
+            setShowImportPanel(false);
+            fetchData();
+        } catch (error) {
+            console.error(error);
+            alert('Не удалось импортировать структуру.');
+        } finally {
+            setIsImportingSubtree(false);
+        }
+    };
+
     const handleAiGenerate = async () => {
         const parentCategory = currentParentId ? findCategoryById(allCategories, currentParentId) : null;
         if (!parentCategory) return;
@@ -260,8 +379,9 @@ const CategoriesPage: React.FC = () => {
 
         setIsAiGenerating(true);
         try {
-            await backendApiService.generateAndSaveSubcategories(parentCategory.id, parentCategory.name);
-            alert('Подкатегории успешно сгенерированы и сохранены!');
+            const aiResult = await backendApiService.generateAndSaveSubcategories(parentCategory.id, parentCategory.name);
+            console.info('AI subcategories meta:', aiResult.meta);
+            alert(`Подкатегории успешно сгенерированы и сохранены! (${aiResult.data.generatedCount} элементов)`);
             fetchData(); // Refresh all data
         } catch (error) {
             console.error(error);
@@ -310,6 +430,77 @@ const CategoriesPage: React.FC = () => {
                 </div>
             </div>
             
+            <div className="bg-base-100 p-5 rounded-lg shadow-lg border border-base-300/60 mb-6">
+                <div className="flex flex-wrap gap-6 text-sm text-base-content/70">
+                    <div>
+                        <p className="text-xs uppercase tracking-wide text-base-content/50">Категорий в каталоге</p>
+                        <p className="text-2xl font-bold text-white">{categoriesCount}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-wide text-base-content/50">В шаблоне</p>
+                        <p className="text-2xl font-bold text-primary">{blueprintCount}</p>
+                    </div>
+                    <div>
+                        <p className="text-xs uppercase tracking-wide text-base-content/50">Без иконки</p>
+                        <p className="text-2xl font-bold text-yellow-400">{categoriesMissingIcons}</p>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-3 mt-4">
+                    <button
+                        onClick={handleBlueprintSync}
+                        disabled={isSyncingBlueprint}
+                        className="px-4 py-2 rounded-lg bg-base-300 text-white font-semibold hover:bg-base-200 disabled:opacity-50"
+                    >
+                        {isSyncingBlueprint ? 'Синхронизация...' : 'Перезаписать шаблоном'}
+                    </button>
+                    <button
+                        onClick={() => setShowImportPanel(prev => !prev)}
+                        className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-semibold hover:bg-primary/30"
+                    >
+                        {showImportPanel ? 'Скрыть импорт JSON' : 'Импорт JSON для текущего уровня'}
+                    </button>
+                </div>
+                {showImportPanel && (
+                    <div className="mt-4 space-y-3">
+                        <p className="text-xs text-base-content/60">
+                            Текущий уровень: <span className="text-white font-semibold">{currentParentName}</span>. Вставьте массив
+                            объектов CategorySchema. При импорте подкатегории будут заменены полностью.
+                        </p>
+                        <textarea
+                            value={importJson}
+                            onChange={e => setImportJson(e.target.value)}
+                            rows={6}
+                            className="w-full bg-base-200 border border-base-300 rounded-lg p-3 font-mono text-xs"
+                            placeholder='[{"name":"NFT аксессуары","fields":[...],"subcategories":[]}]'
+                        />
+                        <div className="flex flex-wrap items-center justify-between text-xs text-base-content/60 gap-2">
+                            <span>
+                                {importPreview.error
+                                    ? `Ошибка: ${importPreview.error}`
+                                    : importPreviewCount > 0
+                                    ? `Обнаружено ${importPreviewCount} элементов`
+                                    : 'Вставьте JSON для предпросмотра'}
+                            </span>
+                            <button
+                                onClick={handleBulkImport}
+                                disabled={
+                                    isImportingSubtree ||
+                                    Boolean(importPreview.error) ||
+                                    importPreviewCount === 0
+                                }
+                                className="px-4 py-2 rounded-lg bg-primary text-white font-semibold hover:bg-primary-focus disabled:opacity-50"
+                            >
+                                {isImportingSubtree
+                                    ? 'Импорт...'
+                                    : currentParentId
+                                    ? 'Заменить подкатегории'
+                                    : 'Заменить весь каталог'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+            
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">
                 {currentCategories.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -323,9 +514,16 @@ const CategoriesPage: React.FC = () => {
                                         <div className="flex items-center gap-3">
                                             {cat.iconUrl && <img src={cat.iconUrl} alt={cat.name} className="w-8 h-8 rounded-md object-contain flex-shrink-0" />}
                                             <div>
-                                                <h3 className="font-bold text-white">{cat.name}</h3>
+                                                <h3 className="font-bold text-white flex items-center gap-2">
+                                                    {cat.name}
+                                                    {!cat.iconUrl && (
+                                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/15 text-yellow-200 uppercase">
+                                                            Нет иконки
+                                                        </span>
+                                                    )}
+                                                </h3>
                                                 <p className="text-xs text-base-content/70">
-                                                    {cat.subcategories?.length || 0} подкатегорий, {cat.fields.length} полей
+                                                    {cat.subcategories?.length || 0} подкатегорий, {cat.fields?.length || 0} полей
                                                 </p>
                                             </div>
                                         </div>

@@ -14,6 +14,12 @@ export interface CategoryField {
   options?: string[]; // For select type
 }
 
+export interface CategoryFieldWithMeta extends CategoryField {
+  inherited?: boolean;
+  sourceCategoryId?: string | null;
+  sourceCategoryName?: string;
+}
+
 export interface CategorySchema {
   // FIX: Added optional id and iconId to match backend entity and support client-side operations.
   id?: string;
@@ -22,6 +28,7 @@ export interface CategorySchema {
   fields: CategoryField[];
   parentId?: string | null;
   subcategories?: CategorySchema[];
+  resolvedFields?: CategoryFieldWithMeta[];
 }
 
 export const CATEGORIES: CategorySchema[] = [

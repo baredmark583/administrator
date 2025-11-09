@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { backendApiService } from '../services/backendApiService';
+import type { DisputesReport } from '../services/backendApiService';
 import type { AdminPanelDispute, AdminPanelDisputeDetails } from '../services/adminApiService';
 import DisputesTable from '../components/DisputesTable';
 import DisputeDetailsModal from '../components/DisputeDetailsModal';
@@ -11,6 +12,7 @@ const DisputesPage: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'open' | 'resolved'>('open');
     const [viewingDispute, setViewingDispute] = useState<AdminPanelDisputeDetails | null>(null);
     const [isLoadingModal, setIsLoadingModal] = useState(false);
+    const [report, setReport] = useState<DisputesReport | null>(null);
 
     const fetchDisputes = async () => {
         setIsLoading(true);
@@ -24,8 +26,18 @@ const DisputesPage: React.FC = () => {
         }
     };
 
+    const fetchReport = async () => {
+        try {
+            const data = await backendApiService.getDisputesReport();
+            setReport(data);
+        } catch (error) {
+            console.error("Failed to fetch dispute report", error);
+        }
+    };
+
     useEffect(() => {
         fetchDisputes();
+        fetchReport();
     }, []);
 
     const filteredDisputes = useMemo(() => {
@@ -73,6 +85,7 @@ const DisputesPage: React.FC = () => {
             await backendApiService.updateDispute(updatedDispute);
             // Optional: refetch for consistency, but optimistic update should suffice
             fetchDisputes();
+            fetchReport();
         } catch (error) {
             console.error("Failed to update dispute:", error);
             alert("Ошибка сохранения. Данные будут возвращены к исходному состоянию.");
@@ -80,11 +93,50 @@ const DisputesPage: React.FC = () => {
         }
     };
 
+    const handleUpdateDisputeMeta = async (updated: AdminPanelDisputeDetails) => {
+        setViewingDispute(updated);
+        setDisputes(prev => prev.map(d => d.id === updated.id ? updated : d));
+        try {
+            await backendApiService.updateDispute(updated);
+            fetchReport();
+        } catch (error) {
+            console.error("Failed to update dispute metadata", error);
+            alert("Не удалось обновить спор.");
+            fetchDisputes();
+        }
+    };
+
     return (
         <div>
             <h1 className="text-3xl font-bold text-white mb-6">Центр Разрешения Споров</h1>
 
-            <div className="bg-base-100 p-6 rounded-lg shadow-lg">
+            <div className="bg-base-100 p-6 rounded-lg shadow-lg space-y-6">
+                {report && (
+                    <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="bg-base-200 p-3 rounded">
+                            <p className="text-xs text-base-content/60">Открытые споры</p>
+                            <p className="text-2xl font-bold text-white">{report.open}</p>
+                        </div>
+                        <div className="bg-base-200 p-3 rounded">
+                            <p className="text-xs text-base-content/60">Решены</p>
+                            <p className="text-2xl font-bold text-white">{report.resolvedBuyer + report.resolvedSeller}</p>
+                        </div>
+                        <div className="bg-base-200 p-3 rounded">
+                            <p className="text-xs text-base-content/60">Среднее время</p>
+                            <p className="text-2xl font-bold text-white">{report.averageResolutionHours} ч</p>
+                        </div>
+                        <div className="bg-base-200 p-3 rounded">
+                            <p className="text-xs text-base-content/60">Нарушений SLA</p>
+                            <p className="text-2xl font-bold text-white">{report.slaBreaches}</p>
+                        </div>
+                    </div>
+                    <div className="text-xs text-base-content/60 flex flex-wrap gap-4">
+                        <span>Приоритеты: низкий — {report.priorityBreakdown.LOW}, нормальный — {report.priorityBreakdown.NORMAL}, срочный — {report.priorityBreakdown.URGENT}</span>
+                        <span>Авто-действий: {report.autoActionsExecuted}</span>
+                    </div>
+                    </>
+                )}
                 <div className="border-b border-base-300 mb-4">
                     <nav className="-mb-px flex space-x-6">
                         <button
@@ -116,6 +168,7 @@ const DisputesPage: React.FC = () => {
                     dispute={viewingDispute}
                     onClose={() => setViewingDispute(null)}
                     onResolve={handleResolveDispute}
+                    onUpdateDispute={handleUpdateDisputeMeta}
                 />
             )}
         </div>

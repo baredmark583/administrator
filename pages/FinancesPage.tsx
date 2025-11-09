@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { backendApiService } from '../services/backendApiService';
-import type { AdminTransaction, AdminGlobalPromoCode } from '../services/adminApiService';
+import type { AdminTransaction, AdminGlobalPromoCode, AdminGlobalPromoCodeInput } from '../services/adminApiService';
 import TransactionsTable from '../components/TransactionsTable';
 import PromoCodesTable from '../components/PromoCodesTable';
 import CreatePromoCodeModal from '../components/CreatePromoCodeModal';
@@ -17,6 +17,7 @@ const FinancesPage: React.FC = () => {
     const [promoCodes, setPromoCodes] = useState<AdminGlobalPromoCode[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [togglingPromoId, setTogglingPromoId] = useState<string | null>(null);
 
     const activeTab: FinanceTab = location.pathname.includes('promocodes') ? 'promocodes' : 'transactions';
     
@@ -41,7 +42,7 @@ const FinancesPage: React.FC = () => {
         fetchData();
     }, [activeTab]);
 
-    const handleCreatePromo = async (data: Omit<AdminGlobalPromoCode, 'id' | 'uses'>) => {
+    const handleCreatePromo = async (data: AdminGlobalPromoCodeInput) => {
         try {
             await backendApiService.createGlobalPromoCode(data);
             setIsModalOpen(false);
@@ -64,6 +65,19 @@ const FinancesPage: React.FC = () => {
         }
     };
 
+    const handleTogglePromo = async (promo: AdminGlobalPromoCode) => {
+        setTogglingPromoId(promo.id);
+        try {
+            await backendApiService.updateGlobalPromoCode(promo.id, { isActive: !promo.isActive });
+            fetchData();
+        } catch (error) {
+            console.error("Failed to toggle promo code", error);
+            alert("Не удалось обновить промокод.");
+        } finally {
+            setTogglingPromoId(null);
+        }
+    };
+
     const renderContent = () => {
         if (isLoading) {
             return <div className="flex justify-center items-center h-64"><Spinner size="lg" /></div>;
@@ -72,7 +86,14 @@ const FinancesPage: React.FC = () => {
             return <TransactionsTable transactions={transactions} />;
         }
         if (activeTab === 'promocodes') {
-            return <PromoCodesTable promoCodes={promoCodes} onDelete={handleDeletePromo} />;
+            return (
+                <PromoCodesTable
+                    promoCodes={promoCodes}
+                    onDelete={handleDeletePromo}
+                    onToggle={handleTogglePromo}
+                    togglingId={togglingPromoId}
+                />
+            );
         }
         return null;
     };

@@ -195,6 +195,8 @@ const IconsPage: React.FC = () => {
     const [savedIcons, setSavedIcons] = useState<AdminIcon[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editingSlot, setEditingSlot] = useState<SystemIcon | null>(null);
+    const [isSyncingMissing, setIsSyncingMissing] = useState(false);
+    const [lastSyncResult, setLastSyncResult] = useState<number | null>(null);
 
     const fetchIcons = useCallback(async () => {
         setIsLoading(true);
@@ -223,12 +225,59 @@ const IconsPage: React.FC = () => {
     };
 
     const iconsMap = useMemo(() => new Map(savedIcons.map(icon => [icon.name, icon])), [savedIcons]);
+    const missingCount = useMemo(
+        () => SYSTEM_ICONS.filter(systemIcon => !iconsMap.get(systemIcon.key)).length,
+        [iconsMap],
+    );
+
+    const handleAutoFillMissing = async () => {
+        if (missingCount === 0) {
+            alert('Все системные иконки уже настроены.');
+            return;
+        }
+        setIsSyncingMissing(true);
+        try {
+            const payload = SYSTEM_ICONS
+                .filter(systemIcon => !iconsMap.get(systemIcon.key))
+                .map(systemIcon => ({
+                    name: systemIcon.key,
+                    iconUrl: systemIcon.suggestionUrl,
+                    width: 24,
+                    height: 24,
+                }));
+            const result = await backendApiService.syncMissingIcons(payload);
+            setLastSyncResult(result.created);
+            fetchIcons();
+        } catch (error) {
+            console.error(error);
+            alert('Не удалось заполнить отсутствующие иконки.');
+        } finally {
+            setIsSyncingMissing(false);
+        }
+    };
 
     return (
         <div>
             <h1 className="text-3xl font-bold text-white mb-4">Библиотека системных иконок</h1>
-            <div className="bg-base-300/50 p-4 rounded-lg mb-6 text-base-content/80 text-sm">
-                Здесь отображаются все места в приложении, где используются иконки. Нажмите "Редактировать", чтобы загрузить свою SVG-иконку или указать ссылку на иконку с <a href="https://icon-sets.iconify.design/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Iconify.design</a>. Изменения применятся на всем сайте.
+            <div className="bg-base-300/50 p-4 rounded-lg mb-6 text-base-content/80 text-sm flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                    Здесь отображаются все места в приложении, где используются иконки. Нажмите «Редактировать», чтобы загрузить свою SVG-иконку или указать ссылку на иконку с{' '}
+                    <a href="https://icon-sets.iconify.design/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Iconify.design</a>. Всего слотов: {SYSTEM_ICONS.length}. Заполнено: {SYSTEM_ICONS.length - missingCount}.
+                </div>
+                <div className="flex flex-col md:items-end gap-1">
+                    <button
+                        onClick={handleAutoFillMissing}
+                        disabled={isSyncingMissing || missingCount === 0}
+                        className="px-4 py-2 rounded-lg bg-primary/20 text-primary font-semibold text-sm hover:bg-primary/30 disabled:opacity-50"
+                    >
+                        {isSyncingMissing ? 'Заполняем...' : missingCount === 0 ? 'Все иконки настроены' : `Автозаполнить ${missingCount} слотов`}
+                    </button>
+                    {lastSyncResult !== null && (
+                        <span className="text-[11px] text-base-content/60">
+                            Создано новых иконок: {lastSyncResult}
+                        </span>
+                    )}
+                </div>
             </div>
             
             <div className="bg-base-100 p-6 rounded-lg shadow-lg">

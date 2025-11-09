@@ -49,21 +49,25 @@ const ProductModerationPage: React.FC = () => {
         }
     };
     
-    const handleSaveProduct = async (updates: Partial<AdminPanelProduct>) => {
-        if (!moderatingProduct) return;
-        
-        const originalProducts = [...products];
-        // Optimistic update (remove from list as its status will change)
-        setProducts(prev => prev.filter(p => p.id !== moderatingProduct.id));
-        setModeratingProduct(null);
-
+    const handleApproveProduct = async (productId: string, note?: string) => {
         try {
-            await backendApiService.updateProduct(moderatingProduct.id, updates);
+            await backendApiService.approveProduct(productId, { note });
+            await fetchProducts();
+            setModeratingProduct(null);
         } catch (error) {
-            console.error("Failed to update product:", error);
-            alert("Ошибка сохранения. Данные будут возвращены к исходному состоянию.");
-            setProducts(originalProducts); // Revert on error by re-adding the item
-            fetchProducts(); // Or just refetch
+            console.error("Failed to approve product:", error);
+            alert("Не удалось одобрить товар. Попробуйте снова.");
+        }
+    };
+
+    const handleRejectProduct = async (productId: string, reason: string, note?: string) => {
+        try {
+            await backendApiService.rejectProduct(productId, { reason, note });
+            await fetchProducts();
+            setModeratingProduct(null);
+        } catch (error) {
+            console.error("Failed to reject product:", error);
+            alert("Не удалось отклонить товар. Попробуйте снова.");
         }
     };
 
@@ -91,7 +95,8 @@ const ProductModerationPage: React.FC = () => {
                 <ProductModerationModal
                     product={moderatingProduct}
                     onClose={() => setModeratingProduct(null)}
-                    onSave={handleSaveProduct}
+                    onApprove={(note) => handleApproveProduct(moderatingProduct.id, note)}
+                    onReject={(reason, note) => handleRejectProduct(moderatingProduct.id, reason, note)}
                 />
             )}
         </div>
