@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { adminApiService, AdminLog } from '../services/adminApiService';
 
 const LogLine: React.FC<{ log: AdminLog }> = ({ log }) => {
@@ -23,18 +23,28 @@ const DebugPage: React.FC = () => {
     const [filter, setFilter] = useState<'All' | 'INFO' | 'WARN' | 'ERROR'>('All');
     const [isPaused, setIsPaused] = useState(false);
     const logContainerRef = useRef<HTMLDivElement>(null);
+    const lastLogIdRef = useRef<number | undefined>(undefined);
+
+    const handleIncomingLog = useCallback((newLog: AdminLog) => {
+        lastLogIdRef.current = newLog.id;
+        setLogs(prevLogs => {
+            const next = [...prevLogs, newLog];
+            const overflow = next.length - 500;
+            return overflow > 0 ? next.slice(overflow) : next;
+        });
+    }, []);
 
     useEffect(() => {
         if (isPaused) return;
 
-        const unsubscribe = adminApiService.subscribeToLogs((newLog) => {
-            setLogs(prevLogs => [...prevLogs, newLog]);
+        const unsubscribe = adminApiService.subscribeToLogs(handleIncomingLog, {
+            sinceId: lastLogIdRef.current,
         });
 
         return () => {
             unsubscribe();
         };
-    }, [isPaused]);
+    }, [isPaused, handleIncomingLog]);
 
     useEffect(() => {
         // Auto-scroll to bottom
@@ -49,6 +59,11 @@ const DebugPage: React.FC = () => {
         }
         return logs.filter(log => log.level === filter);
     }, [logs, filter]);
+
+    const handleClear = useCallback(() => {
+        setLogs([]);
+        lastLogIdRef.current = undefined;
+    }, []);
 
     const FilterButton: React.FC<{ level: typeof filter }> = ({ level }) => (
         <button
@@ -75,7 +90,7 @@ const DebugPage: React.FC = () => {
                          <button onClick={() => setIsPaused(!isPaused)} className="px-3 py-1 text-sm rounded-md bg-base-300 hover:bg-base-100">
                             {isPaused ? '▶️ Возобновить' : '⏸️ Пауза'}
                         </button>
-                        <button onClick={() => setLogs([])} className="px-3 py-1 text-sm rounded-md bg-base-300 hover:bg-base-100">
+                        <button onClick={handleClear} className="px-3 py-1 text-sm rounded-md bg-base-300 hover:bg-base-100">
                             🧹 Очистить
                         </button>
                     </div>

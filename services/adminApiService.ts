@@ -16,6 +16,7 @@ export type {
     Setting,
     SettingAuditEntry,
     DisputesReport,
+    AdminLog,
 } from './backendApiService';
 
 export { backendApiService as adminApiService } from './backendApiService';

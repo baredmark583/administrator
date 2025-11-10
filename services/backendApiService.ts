@@ -38,6 +38,23 @@ export interface SettingAuditEntry {
     createdAt: string;
 }
 
+export type AdminLogLevel = 'INFO' | 'WARN' | 'ERROR';
+export interface AdminLog {
+    id: number;
+    timestamp: Date;
+    level: AdminLogLevel;
+    message: string;
+    meta?: Record<string, any>;
+}
+
+interface AdminLogPayload {
+    id: number;
+    timestamp: string;
+    level: AdminLogLevel;
+    message: string;
+    meta?: Record<string, any>;
+}
+
 export interface SalesChartDataPoint {
     name: string;
     sales: number;
@@ -825,5 +842,45 @@ export const backendApiService = {
     getLiveStreams: async(): Promise<LiveStream[]> => {
         // This is a public endpoint, so we can call it directly.
         return apiFetch('/livestreams');
+    },
+
+    subscribeToLogs: (listener: (log: AdminLog) => void, options?: { sinceId?: number }): (() => void) => {
+        let isActive = true;
+        let sinceId: number | undefined = options?.sinceId;
+
+        const poll = async () => {
+            if (!isActive) {
+                return;
+            }
+            try {
+                const query = sinceId ? `?since=${sinceId}` : '';
+                const response = (await apiFetch(`/metrics/logs${query}`)) as AdminLogPayload[] | undefined;
+                const payload = Array.isArray(response) ? response : [];
+                payload
+                    .sort((a, b) => a.id - b.id)
+                    .forEach((entry) => {
+                        sinceId = entry.id;
+                        listener({
+                            id: entry.id,
+                            timestamp: new Date(entry.timestamp),
+                            level: entry.level,
+                            message: entry.message,
+                            meta: entry.meta,
+                        });
+                    });
+            } catch (error) {
+                console.error('Admin log polling failed', error);
+            } finally {
+                if (isActive) {
+                    setTimeout(poll, 4000);
+                }
+            }
+        };
+
+        poll();
+
+        return () => {
+            isActive = false;
+        };
     },
 };

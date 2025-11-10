@@ -10,7 +10,6 @@ interface AdminUser {
 
 interface AdminAuthContextType {
   user: AdminUser | null;
-  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
@@ -21,25 +20,16 @@ const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefin
 
 export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Start loading to validate token
+  const [isLoading, setIsLoading] = useState(true); // Start loading to validate session
 
   useEffect(() => {
     const validateToken = async () => {
-      const existingToken = localStorage.getItem('adminToken');
-      if (existingToken) {
-        try {
-          const adminData = await backendApiService.getMe();
-          setUser(adminData);
-          setToken(existingToken);
-        } catch (error) {
-          console.error("Admin token validation failed:", error);
-          // Token is invalid, clear storage
-          localStorage.removeItem('adminToken');
-          localStorage.removeItem('adminUser');
-          setUser(null);
-          setToken(null);
-        }
+      try {
+        const adminData = await backendApiService.getMe();
+        setUser(adminData);
+      } catch (error) {
+        console.warn('Admin session validation failed:', error);
+        setUser(null);
       }
       setIsLoading(false);
     };
@@ -50,15 +40,10 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
   const login = async (email: string, pass: string) => {
     setIsLoading(true);
     try {
-        const { access_token, user: adminUser } = await backendApiService.login(email, pass);
-        localStorage.setItem('adminToken', access_token);
-        localStorage.setItem('adminUser', JSON.stringify(adminUser));
-        setToken(access_token);
-        setUser(adminUser as AdminUser);
+        await backendApiService.login(email, pass);
+        const adminData = await backendApiService.getMe();
+        setUser(adminData);
     } catch (error) {
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('adminUser');
-        setToken(null);
         setUser(null);
         throw error;
     } finally {
@@ -68,19 +53,16 @@ export const AdminAuthProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const logout = useCallback(() => {
     setUser(null);
-    setToken(null);
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminUser');
+    // Optional: call backend logout endpoint if/when it exists
   }, []);
 
   const value = useMemo(() => ({
     user,
-    token,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user,
     isLoading,
     login,
     logout,
-  }), [user, token, isLoading, login, logout]);
+  }), [user, isLoading, login, logout]);
 
   return (
     <AdminAuthContext.Provider value={value}>
